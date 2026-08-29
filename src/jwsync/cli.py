@@ -18,6 +18,13 @@ from .archive import (
     unique_path,
     write_backup,
 )
+from .local import (
+    LocalLibrary,
+    LocalLibraryError,
+    default_device_name,
+    find_libraries,
+    find_library,
+)
 from .merge import COUNTED_TABLES, MergeError, MergeOptions, merge_backups
 from .report import MergeReport
 from .verify import verify
@@ -243,6 +250,90 @@ def cmd_verify(args: argparse.Namespace) -> int:
     return 0 if result.ok else 1
 
 
+def _library(args: argparse.Namespace) -> LocalLibrary:
+    if getattr(args, "library", None):
+        library = LocalLibrary(Path(args.library).expanduser().resolve())
+        if not library.exists():
+            raise LocalLibraryError(f"no userData.db in {library.path}")
+        return library
+    return find_library()
+
+
+def cmd_status(args: argparse.Namespace) -> int:
+    found = find_libraries()
+    if not found:
+        print("No JW Library installation found on this computer.")
+        print(
+            "That is normal on Linux, and on a Mac or PC where the app is not "
+            "installed. Phones and tablets always export by hand."
+        )
+        return 1
+
+    for library in found:
+        print(f"JW Library data folder : {library.path}")
+        print(f"  schema version       : v{library.schema_version()}")
+        print(f"  app running          : {'yes' if library.is_running() else 'no'}")
+        counts = library.counts()
+        for table, n in counts.items():
+            if n:
+                print(f"    {table:<34}{n:>7}")
+        print()
+    return 0
+
+
+def cmd_pull(args: argparse.Namespace) -> int:
+    library = _library(args)
+    folder = Path(args.folder).expanduser()
+    folder.mkdir(parents=True, exist_ok=True)
+    name = args.device_name or default_device_name()
+    out = folder / f"UserdataBackup_{name}_local.jwlibrary"
+
+    library.export(out, device_name=name)
+    print(f"Exported this computer's library to {out}")
+    print("Safe to run while JW Library is open.")
+    return 0
+
+
+def cmd_push(args: argparse.Namespace) -> int:
+    library = _library(args)
+    source = Path(args.backup).expanduser()
+    if not source.is_file():
+        print(f"{source} does not exist", file=sys.stderr)
+        return 2
+
+    if library.is_running():
+        print(
+            "JW Library is running. Quit it completely, then run this again -- "
+            "writing to its database while it is open risks corrupting it.",
+            file=sys.stderr,
+        )
+        return 1
+
+    check = verify(source, [source])
+    if not check.ok:
+        print(f"{source.name} does not verify against itself; refusing", file=sys.stderr)
+        return 1
+
+    if not args.yes:
+        print("About to replace this computer's JW Library with:")
+        print(f"  {source}")
+        print()
+        print("The current library will be copied aside first, but this replaces")
+        print("what JW Library shows on this computer. Re-run with --yes to do it.")
+        return 1
+
+    result = library.install(source)
+    print(f"Installed {source.name} into {library.path}")
+    print(f"  previous library saved to {result['safetyCopy']}")
+    print(f"  media files added         {result['mediaCopied']}")
+    for table in sorted(result["after"]):
+        before = result["before"].get(table, 0)
+        after = result["after"][table]
+        if after != before:
+            print(f"  {table:<34}{before:>7} -> {after:>7}")
+    return 0
+
+
 def cmd_install_agent(args: argparse.Namespace) -> int:
     from .agent import install
 
@@ -273,6 +364,14 @@ def cmd_watch(args: argparse.Namespace) -> int:
     options = MergeOptions(
         input_fields=args.input_fields, check_integrity=not args.no_integrity_check
     )
+    library = None
+    if args.with_local or args.push_local:
+        try:
+            library = _library(args)
+        except LocalLibraryError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+
     return watch(
         folder,
         interval=args.interval,
@@ -280,6 +379,8 @@ def cmd_watch(args: argparse.Namespace) -> int:
         accumulate=not args.fresh,
         keep_history=not args.no_history,
         once=args.once,
+        library=library,
+        push_local=args.push_local,
     )
 
 
@@ -377,6 +478,44 @@ def build_parser() -> argparse.ArgumentParser:
     p_verify.add_argument("--json", action="store_true")
     p_verify.set_defaults(func=cmd_verify)
 
+    def add_library_option(p: argparse.ArgumentParser) -> None:
+        p.add_argument(
+            "--library",
+            type=Path,
+            help="path to the JW Library data folder, if it is not found automatically",
+        )
+
+    p_status = sub.add_parser(
+        "status", help="show the JW Library installed on this computer, if any"
+    )
+    p_status.set_defaults(func=cmd_status)
+
+    p_pull = sub.add_parser(
+        "pull",
+        help=(
+            "export this computer's live JW Library into the shared folder, "
+            "with no Create Backup tapping needed"
+        ),
+    )
+    p_pull.add_argument("folder", type=Path)
+    p_pull.add_argument("--device-name", default="")
+    add_library_option(p_pull)
+    p_pull.set_defaults(func=cmd_pull)
+
+    p_push = sub.add_parser(
+        "push",
+        help=(
+            "install a merged backup straight into this computer's JW Library, "
+            "with no Restore Backup tapping needed (JW Library must be closed)"
+        ),
+    )
+    p_push.add_argument("backup", type=Path)
+    p_push.add_argument(
+        "--yes", action="store_true", help="confirm replacing the local library"
+    )
+    add_library_option(p_push)
+    p_push.set_defaults(func=cmd_push)
+
     p_watch = sub.add_parser(
         "watch",
         help=(
@@ -402,6 +541,23 @@ def build_parser() -> argparse.ArgumentParser:
     p_watch.add_argument(
         "--no-history", action="store_true", help="do not keep dated copies of merges"
     )
+    p_watch.add_argument(
+        "--with-local",
+        action="store_true",
+        help=(
+            "also export this computer's own JW Library into the folder before "
+            "each merge; safe while the app is open"
+        ),
+    )
+    p_watch.add_argument(
+        "--push-local",
+        action="store_true",
+        help=(
+            "also install the merged result back into this computer's JW "
+            "Library after each merge; skipped while the app is open"
+        ),
+    )
+    add_library_option(p_watch)
     add_merge_options(p_watch)
     p_watch.set_defaults(func=cmd_watch)
 
@@ -426,7 +582,7 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
         return args.func(args)
-    except ArchiveError as exc:
+    except (ArchiveError, LocalLibraryError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
     except KeyboardInterrupt:

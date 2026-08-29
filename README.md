@@ -115,28 +115,54 @@ the Task Scheduler command on Windows. It does **not** start it — the command
 prints the one line that does, so nothing begins running at login without you
 asking.
 
+#### On this computer: no taps at all
+
+On a Mac or PC the library is not something you export — it is a live SQLite
+database inside the app's folder, and `jwsync` can read and write it directly:
+
+```bash
+jwsync status                      # find it, show what is in it
+jwsync pull ~/JW\ backups          # export it — safe while JW Library is open
+jwsync push "~/JW backups/JW Library MERGED.jwlibrary" --yes   # app must be closed
+```
+
+`watch` does both for you:
+
+```bash
+jwsync watch ~/JW\ backups --with-local --push-local
+```
+
+`--with-local` exports this computer's library before every merge. `--push-local`
+installs the merged result back into it afterwards, and is skipped with a message
+whenever JW Library is open, because writing to a live WAL database can corrupt
+it. The previous library is always copied aside first, into
+`~/jwsync-safety-copies/`.
+
+So on the computer the whole round trip is automatic. Phones and tablets are
+what still need taps.
+
 #### What this can and cannot automate
 
-JW Library has no API, no URL scheme and no Shortcuts actions. Exporting a
-backup and restoring one will always be taps inside the app. Everything between
-them is automatic:
+JW Library has no API, no URL scheme and no Shortcuts actions, and a phone's app
+storage is not reachable from a computer. So on **phones and tablets**, export
+and restore stay manual. Everywhere else it is automatic:
 
-| Step | Who does it |
-| --- | --- |
-| Export a backup on a device | You — Personal Study ▸ ⤒ ▸ Create Backup ▸ save into the shared folder |
-| Notice the new backup | `jwsync watch` |
-| Merge it with every other device | `jwsync watch` |
-| Check nothing was lost | `jwsync watch` (runs `verify` on every merge) |
-| Push the result back to the devices | Your cloud provider |
-| Restore on a device | You — Personal Study ▸ ⤒ ▸ Restore Backup ▸ `JW Library MERGED.jwlibrary` |
+| Step | Mac / PC | Phone / tablet |
+| --- | --- | --- |
+| Get the library out | `jwsync pull` | You — Personal Study ▸ ⤒ ▸ Create Backup, save into the shared folder |
+| Notice the new backup | `jwsync watch` | `jwsync watch` |
+| Merge everything | `jwsync watch` | `jwsync watch` |
+| Check nothing was lost | `jwsync watch` | `jwsync watch` |
+| Move it back to the device | your cloud provider | your cloud provider |
+| Put the library back in | `jwsync push` | You — Personal Study ▸ ⤒ ▸ Restore Backup |
 
-So a round of syncing costs a handful of taps per device and no work at the
-computer. Export where you made changes, restore where you want them.
+A round of syncing therefore costs nothing on the computer and a handful of taps
+per phone or tablet. Export where you made changes, restore where you want them.
 
 Two things worth setting up once:
 
-- Export **straight into the shared folder** from the share sheet (Files ▸ iCloud
-  Drive ▸ your folder). That removes the transfer step entirely.
+- On a phone, export **straight into the shared folder** from the share sheet
+  (Files ▸ iCloud Drive ▸ your folder). That removes the transfer step entirely.
 - If a device's backup shows as a `.icloud` placeholder, the watcher says so and
   waits rather than merging a half-downloaded file. Marking the folder *Keep
   Downloaded* avoids it.
@@ -229,6 +255,9 @@ report says so and the command exits non-zero.
 | `--once` | Check once and exit, for cron or Task Scheduler |
 | `--fresh` | Rebuild from the device backups alone, ignoring the previous merge |
 | `--no-history` | Do not keep dated copies of merges |
+| `--with-local` | Also export this computer's own library before each merge |
+| `--push-local` | Also install the merged result back into this computer's library |
+| `--library PATH` | The JW Library data folder, if it is not found automatically |
 | `--no-integrity-check` | Skip the foreign-key verification pass |
 
 ## The file format
@@ -249,6 +278,13 @@ Two details that matter and are not obvious:
   encoding. If a device ever refuses a merged file, `--hash-mode keep` reuses the
   base backup's original value and `--hash-mode empty` writes an empty string.
 
+On a desktop the app keeps that database in **WAL mode**, and the main file can
+be almost empty while the write-ahead log holds nearly everything — so reading
+it means folding the log in (`jwsync` uses `VACUUM INTO`, which is consistent
+even while the app is running), and writing it means deleting the stale log so
+it cannot be replayed over the new database. `jwsync push` does both, and
+refuses outright while JW Library is open.
+
 `jwsync` refuses to merge backups whose `schemaVersion` differs; update JW
 Library on both devices and export again. Schema versions 14–16 are recognised;
 anything else merges with a warning.
@@ -258,8 +294,9 @@ anything else merges with a warning.
 - Additive only, so deletions do not propagate (see the first section). Use
   `--fresh` to rebuild from the device backups alone when you want dropped data
   to stay dropped.
-- Export and restore cannot be automated; JW Library exposes no interface for
-  them. `watch` automates everything in between.
+- On phones and tablets, export and restore cannot be automated; JW Library
+  exposes no interface for them and the app's storage is not reachable from a
+  computer. On a Mac or PC, `pull` and `push` remove even those steps.
 - Bookmarks are capped at 10 slots per publication by the schema; extras are
   reported rather than merged.
 - Study answers carry no timestamp, so their conflicts are resolved by policy,
@@ -272,7 +309,7 @@ anything else merges with a warning.
 
 ```bash
 python -m venv .venv && .venv/bin/pip install -e ".[dev]"
-.venv/bin/python -m pytest      # 73 tests
+.venv/bin/python -m pytest      # 85 tests
 .venv/bin/ruff check src tests
 ```
 

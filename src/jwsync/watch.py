@@ -18,6 +18,7 @@ from datetime import datetime
 from pathlib import Path
 
 from .archive import Backup, write_backup
+from .local import LocalLibrary, LocalLibraryError, default_device_name
 from .merge import MergeOptions, merge_backups
 from .report import MergeReport
 from .verify import VerifyResult, verify
@@ -174,6 +175,8 @@ def watch(
     accumulate: bool = True,
     keep_history: bool = True,
     once: bool = False,
+    library: LocalLibrary | None = None,
+    push_local: bool = False,
     log: Callable[[str], None] = print,
 ) -> int:
     """Poll ``folder`` and merge whenever the set of backups changes.
@@ -187,6 +190,12 @@ def watch(
 
     What has been merged is remembered in the folder, so restarting the watcher
     or running it from cron does not redo finished work.
+
+    When ``library`` is given, this computer's own JW Library is exported into
+    the folder before each merge, which needs no interaction and is safe while
+    the app is open. ``push_local`` additionally installs the merged result
+    back into it -- that one replaces the local library, so it is opt-in, and
+    it is skipped with a message whenever JW Library is running.
     """
     folder = Path(folder)
     exclude = {STABLE_OUTPUT_NAME}
@@ -198,6 +207,36 @@ def watch(
 
     def stamp() -> str:
         return datetime.now().strftime("%H:%M:%S")
+
+    def pull_local() -> None:
+        if library is None:
+            return
+        name = default_device_name()
+        try:
+            library.export(
+                folder / f"UserdataBackup_{name}_local.jwlibrary", device_name=name
+            )
+        except (LocalLibraryError, OSError) as exc:
+            log(f"[{stamp()}] could not read this computer's library: {exc}")
+
+    def push_local_library(output: Path) -> None:
+        if not push_local or library is None:
+            return
+        if library.is_running():
+            log(
+                f"[{stamp()}] JW Library is open, so this computer was not "
+                "updated; quit it and the next merge will do it"
+            )
+            return
+        try:
+            result = library.install(output)
+        except (LocalLibraryError, OSError) as exc:
+            log(f"[{stamp()}] could not update this computer's library: {exc}")
+        else:
+            log(
+                f"[{stamp()}] this computer's library updated "
+                f"(previous copy: {result['safetyCopy']})"
+            )
 
     def do_merge(current: frozenset[FileState]) -> bool:
         if len(inputs_for(folder, accumulate=accumulate)) < 2:
@@ -224,6 +263,7 @@ def watch(
             log(f"           missing {miss.table}: {miss.description}")
         for err in report.integrity_errors:
             log(f"           integrity: {err}")
+        push_local_library(output)
         write_state(folder, current)
         return True
 
@@ -235,6 +275,7 @@ def watch(
         if waiting:
             log(f"[{stamp()}] waiting for the cloud to download: {', '.join(waiting)}")
 
+        pull_local()
         current = snapshot(folder, exclude)
 
         if current == merged_for:
