@@ -16,6 +16,7 @@ Skipped when Node is not installed; CI has it.
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import sqlite3
 import struct
@@ -33,12 +34,14 @@ pytestmark = pytest.mark.skipif(NODE is None, reason="Node is not installed")
 RUNNER = r"""
 import { readFileSync, existsSync } from "node:fs";
 import { createRequire } from "node:module";
+import { pathToFileURL } from "node:url";
 
 const web = process.argv[2];
 const dir = process.argv[3];
-const require = createRequire(web + "/");
+const webUrl = pathToFileURL(web + "/").href;
+const require = createRequire(webUrl);
 const initSqlJs = require(web + "/vendor/sql-wasm.js");
-const { applyWal } = await import(web + "/wal.js");
+const { applyWal } = await import(webUrl + "wal.js");
 
 const db = new Uint8Array(readFileSync(dir + "/test.db"));
 const walPath = dir + "/test.db-wal";
@@ -87,7 +90,7 @@ def run_apply_wal(folder: Path) -> dict:
             capture_output=True,
             text=True,
             timeout=120,
-            env={"PATH": "/usr/bin:/bin:/usr/local/bin"},
+            env=dict(os.environ),
         )
     if result.returncode != 0:
         pytest.fail(f"applyWal crashed:\n{result.stderr[-2000:]}")

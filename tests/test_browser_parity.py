@@ -11,6 +11,7 @@ Skipped when Node is not installed; CI has it.
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import tempfile
@@ -33,12 +34,14 @@ OLDER = "2026-01-01T00:00:00+0000"
 RUNNER = r"""
 import { openAsBlob } from "node:fs";
 import { createRequire } from "node:module";
+import { pathToFileURL } from "node:url";
 
-const require = createRequire(process.argv[2] + "/");
+const web = pathToFileURL(process.argv[2] + "/").href;
+const require = createRequire(web);
 const initSqlJs = require(process.argv[2] + "/vendor/sql-wasm.js");
-const { BackupFile } = await import(process.argv[2] + "/jwlibrary.js");
-const { mergeInto, countsOf } = await import(process.argv[2] + "/merge.js");
-const { verify } = await import(process.argv[2] + "/verify.js");
+const { BackupFile } = await import(web + "jwlibrary.js");
+const { mergeInto, countsOf } = await import(web + "merge.js");
+const { verify } = await import(web + "verify.js");
 
 const SQL = await initSqlJs({
   locateFile: () => process.argv[2] + "/vendor/sql-wasm.wasm",
@@ -101,10 +104,9 @@ def run_browser_engine(paths: list[Path], input_fields: str = "keep") -> dict:
             capture_output=True,
             text=True,
             timeout=300,
-            env={
-                "PATH": "/usr/bin:/bin:/usr/local/bin",
-                "BRAID_INPUT_FIELDS": input_fields,
-            },
+            # Inherit the environment rather than replacing it: Node needs
+            # several variables to start at all on Windows.
+            env={**os.environ, "BRAID_INPUT_FIELDS": input_fields},
         )
     if result.returncode != 0:
         pytest.fail(f"the browser engine failed:\n{result.stderr[-2000:]}")
