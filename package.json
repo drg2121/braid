@@ -1,0 +1,15 @@
+{
+  "name": "jwsync-web",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Browser build of jwsync: merge JW Library backups with no computer involved",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test --test-timeout=30000 web/store.test.mjs",
+    "build": "python3 web/build.py"
+  },
+  "devDependencies": {
+    "fake-indexeddb": "^6.0.0"
+  }
+}

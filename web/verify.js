@@ -8,22 +8,16 @@
 // Mirrors src/jwsync/verify.py.
 
 import {
-  NULL_SENTINEL,
-  UNIT,
   all,
+  key,
   locationIdentity,
   mediaContext,
   owningTags,
   playlistItemKey,
 } from "./merge.js";
 
-// The key construction is imported rather than repeated, so the verifier
-// and the merge can never drift apart and disagree about what a row is.
-function key(...values) {
-  return values
-    .map((v) => (v === null || v === undefined ? NULL_SENTINEL : String(v)))
-    .join(UNIT);
-}
+// key() is imported rather than repeated, so the verifier and the merge
+// cannot drift apart and disagree about what identifies a row.
 
 function locationById(db) {
   const out = new Map();

@@ -17,7 +17,7 @@ from pathlib import Path
 HERE = Path(__file__).parent
 
 # Module order matters: each may only import from ones already inlined.
-MODULES = ["jwlibrary.js", "merge.js", "verify.js", "app.js"]
+MODULES = ["jwlibrary.js", "merge.js", "verify.js", "store.js", "app.js"]
 
 
 def strip_module_syntax(source: str, name: str) -> str:
@@ -47,15 +47,47 @@ def strip_module_syntax(source: str, name: str) -> str:
     return f"// ---- {name} ----\n{source.strip()}\n"
 
 
+TOP_LEVEL = re.compile(
+    r"^(?:const|let|var|function|async function|class)\s+([A-Za-z_$][\w$]*)",
+    re.MULTILINE,
+)
+
+
+def check_for_collisions(pieces: dict[str, str]) -> None:
+    """Refuse to build if two modules declare the same top-level name.
+
+    Bundling drops every module into one scope, where two modules that each
+    define, say, ``DB_NAME`` become a SyntaxError that only shows up in the
+    browser console -- with the whole page dead and nothing else to go on.
+    """
+    seen: dict[str, str] = {}
+    clashes: list[str] = []
+    for name, source in pieces.items():
+        for match in TOP_LEVEL.finditer(source):
+            declared = match.group(1)
+            if declared in seen and seen[declared] != name:
+                clashes.append(f"{declared} (in {seen[declared]} and {name})")
+            seen.setdefault(declared, name)
+    if clashes:
+        raise SystemExit(
+            "cannot bundle: these names are declared in more than one module, "
+            "and every module shares one scope once bundled.\n  "
+            + "\n  ".join(sorted(set(clashes)))
+            + "\nRename one of each pair."
+        )
+
+
 def build(out_path: Path) -> Path:
     html = (HERE / "index.html").read_text(encoding="utf-8")
     sql_js = (HERE / "vendor" / "sql-wasm.js").read_text(encoding="utf-8")
     wasm = (HERE / "vendor" / "sql-wasm.wasm").read_bytes()
 
-    bundle = "\n".join(
-        strip_module_syntax((HERE / name).read_text(encoding="utf-8"), name)
+    pieces = {
+        name: strip_module_syntax((HERE / name).read_text(encoding="utf-8"), name)
         for name in MODULES
-    )
+    }
+    check_for_collisions(pieces)
+    bundle = "\n".join(pieces.values())
 
     replacement = (
         "<script>\n"

@@ -46,7 +46,19 @@ python3 web/build.py                       # one self-contained file in dist/
 
 `web/build.py` inlines every module and the SQLite WebAssembly build into a
 single ~1 MB HTML file that can be emailed or AirDropped and opened straight from
-Files.
+Files. Because bundling drops every module into one scope, it refuses to build
+when two modules declare the same top-level name -- a collision that otherwise
+surfaces only as a dead page and a `SyntaxError` in a console nobody has open.
+
+The page remembers the combined library in IndexedDB, per person, so the next
+round needs only a fresh backup from the device that was actually used rather
+than one from every device. Several people can share one browser without their
+libraries ever mixing, which matters on a shared tablet. `web/store.test.mjs`
+covers that with `fake-indexeddb`:
+
+```bash
+npm install --no-save fake-indexeddb && npm test
+```
 
 Two things make it fast enough for a 210 MB backup on a phone. Media is copied
 between archives as its already-compressed bytes, referenced through `Blob`

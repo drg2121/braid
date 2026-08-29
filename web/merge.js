@@ -32,12 +32,10 @@ export const COUNTED_TABLES = [
 const UNIT = "\u001f";
 const NULL_SENTINEL = "\u001eNULL\u001e";
 
-export { UNIT, NULL_SENTINEL };
-
 export class MergeError extends Error {}
 
 /** A key that treats NULL as a value of its own. */
-function key(...values) {
+export function key(...values) {
   return values
     .map((v) => (v === null || v === undefined ? NULL_SENTINEL : String(v)))
     .join(UNIT);

@@ -1,0 +1,4 @@
+{
+  "//": "sql-wasm.js is a UMD build. The repository root declares type=module, which would make Node parse it as an ES module and its exports would vanish. This pins the vendored directory back to CommonJS.",
+  "type": "commonjs"
+}

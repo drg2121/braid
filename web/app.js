@@ -1,14 +1,41 @@
-// The page's wiring: pick backups, merge them, check the result, save it.
+// The page's wiring: choose whose library, add backups, combine, remember.
 
 import { BackupFile, ZipBuilder, rawSlice } from "./jwlibrary.js";
 import { mergeInto } from "./merge.js";
+import {
+  createPerson,
+  currentPersonId,
+  deletePerson,
+  forgetLibrary,
+  getPerson,
+  listPeople,
+  rememberCurrentPerson,
+  rememberLibrary,
+  renamePerson,
+  requestPersistence,
+  usage,
+} from "./store.js";
 import { verify } from "./verify.js";
 
 const $ = (id) => document.getElementById(id);
 
+// Rows worth showing as a headline; the rest stay in the detailed report.
+const HEADLINE = [
+  ["UserMark", "highlights"],
+  ["Note", "notes"],
+  ["Bookmark", "bookmarks"],
+  ["Tag", "tags"],
+  ["PlaylistItem", "playlist items"],
+];
+
 let SQL = null;
-let backups = [];
+let people = [];
+let personId = null;
+let added = []; // BackupFile objects picked this visit
 let merged = null; // { blob, name }
+let storeBroken = false;
+
+// -- helpers ---------------------------------------------------------------
 
 async function sqlEngine() {
   if (SQL) return SQL;
@@ -30,9 +57,7 @@ function base64ToBytes(text) {
   return bytes;
 }
 
-function megabytes(n) {
-  return `${(n / 1e6).toFixed(1)} MB`;
-}
+const megabytes = (n) => `${(n / 1e6).toFixed(1)} MB`;
 
 function shortDate(iso) {
   if (!iso) return "date unknown";
@@ -55,13 +80,130 @@ function banner(target, kind, title, detail) {
   target.append(box);
 }
 
+function say(kind, title, detail, { showSave = false } = {}) {
+  banner($("resultBanner"), kind, title, detail);
+  $("save").hidden = !showSave;
+  $("result").hidden = false;
+}
+
+// -- people ----------------------------------------------------------------
+
+function currentPerson() {
+  return people.find((p) => p.id === personId) || null;
+}
+
+async function loadPeople() {
+  try {
+    people = await listPeople();
+  } catch (error) {
+    storeBroken = true;
+    people = [];
+    $("personCard").hidden = true;
+    $("libraryCard").hidden = true;
+    $("storageNote").textContent =
+      `This browser cannot remember anything (${error.message}), so you will` +
+      " need to add a backup from every device each time. Combining still works.";
+    return;
+  }
+
+  if (!people.length) {
+    people = [await createPerson("Me")];
+  }
+  const wanted = currentPersonId();
+  personId = people.some((p) => p.id === wanted) ? wanted : people[0].id;
+  rememberCurrentPerson(personId);
+  renderPeople();
+}
+
+function renderPeople() {
+  const select = $("person");
+  select.replaceChildren();
+  for (const person of people) {
+    const option = document.createElement("option");
+    option.value = person.id;
+    option.textContent = person.name;
+    option.selected = person.id === personId;
+    select.append(option);
+  }
+  $("personName").value = currentPerson()?.name || "";
+  $("removePerson").disabled = people.length < 2;
+}
+
+async function renderLibrary() {
+  if (storeBroken) return;
+  const stored = personId ? await getPerson(personId) : null;
+  const has = Boolean(stored?.library);
+  $("libraryCard").hidden = !has;
+  if (!has) {
+    updateMergeButton();
+    return;
+  }
+
+  $("libraryUpdated").textContent = `updated ${shortDate(stored.updated)}`;
+
+  const stats = $("librarySummary");
+  stats.replaceChildren();
+  for (const [table, label] of HEADLINE) {
+    const n = stored.summary?.[table];
+    if (!n) continue;
+    const box = document.createElement("div");
+    box.className = "stat";
+    const b = document.createElement("b");
+    b.textContent = n.toLocaleString();
+    box.append(b, document.createTextNode(label));
+    stats.append(box);
+  }
+
+  const list = $("devices");
+  list.replaceChildren();
+  for (const device of stored.devices || []) {
+    const li = document.createElement("li");
+    li.className = "item";
+    const box = document.createElement("div");
+    box.className = "grow";
+    const name = document.createElement("div");
+    name.className = "name";
+    name.textContent = device.name || "unnamed device";
+    const meta = document.createElement("div");
+    meta.className = "meta";
+    meta.textContent = `last backup ${shortDate(device.lastModified)}`;
+    box.append(name, meta);
+    li.append(box);
+    list.append(li);
+  }
+
+  updateMergeButton();
+}
+
+async function showStorageNote() {
+  if (storeBroken) return;
+  const persisted = await requestPersistence();
+  const room = await usage();
+  const parts = [];
+  if (room && room.available) {
+    parts.push(
+      `Remembering uses ${megabytes(room.used)} of the ` +
+        `${megabytes(room.available)} this browser allows.`
+    );
+  }
+  parts.push(
+    persisted
+      ? "This browser has agreed to keep it."
+      : "The browser may clear it if the device runs low on space, so keep the" +
+          " combined file saved in Files as well."
+  );
+  $("storageNote").textContent = parts.join(" ");
+}
+
+// -- picked files ----------------------------------------------------------
+
 function renderFiles() {
   const list = $("files");
   list.replaceChildren();
 
-  for (const [index, backup] of backups.entries()) {
+  for (const [index, backup] of added.entries()) {
     const li = document.createElement("li");
-    li.className = "file";
+    li.className = "item";
 
     const box = document.createElement("div");
     box.className = "grow";
@@ -81,7 +223,7 @@ function renderFiles() {
     drop.textContent = "×";
     drop.setAttribute("aria-label", `Remove ${backup.file.name}`);
     drop.addEventListener("click", () => {
-      backups.splice(index, 1);
+      added.splice(index, 1);
       renderFiles();
     });
 
@@ -89,36 +231,58 @@ function renderFiles() {
     list.append(li);
   }
 
-  $("empty").hidden = backups.length > 0;
-  $("merge").disabled = backups.length < 2;
+  $("empty").hidden = added.length > 0;
+  updateMergeButton();
+}
+
+/** How many real devices the library now draws on, ignoring the store itself. */
+async function storedDeviceCount(justAdded) {
+  const names = new Set(justAdded.map((b) => b.deviceName || b.file.name));
+  if (!storeBroken && personId) {
+    const stored = await getPerson(personId);
+    for (const device of stored?.devices || []) names.add(device.name);
+  }
+  return names.size;
+}
+
+async function hasStoredLibrary() {
+  if (storeBroken || !personId) return false;
+  const stored = await getPerson(personId);
+  return Boolean(stored?.library);
+}
+
+async function updateMergeButton() {
+  const stored = await hasStoredLibrary();
+  // One new backup is enough when there is already a remembered library.
+  const enough = added.length >= (stored ? 1 : 2);
+  $("merge").disabled = !enough;
+  $("merge").textContent = stored ? "Add to the remembered library" : "Combine";
 }
 
 async function addFiles(fileList) {
   const problems = [];
   for (const file of fileList) {
-    if (backups.some((b) => b.file.name === file.name && b.file.size === file.size)) {
+    if (added.some((b) => b.file.name === file.name && b.file.size === file.size)) {
       continue;
     }
     try {
-      backups.push(await BackupFile.open(file));
+      added.push(await BackupFile.open(file));
     } catch (error) {
       problems.push(`${file.name}: ${error.message}`);
     }
   }
   renderFiles();
   if (problems.length) {
-    banner($("resultBanner"), "err", "Some files could not be opened", problems.join(" "));
-    $("result").hidden = false;
-    $("save").hidden = true;
+    say("err", "Some files could not be opened.", problems.join(" "));
   }
 }
 
+// -- the report ------------------------------------------------------------
+
 function reportText(report, check) {
-  const lines = [];
-  lines.push(`Started from : ${report.base} (${report.baseDevice})`);
+  const lines = [`Started from : ${report.base} (${report.baseDevice})`];
   for (const source of report.sources) {
-    lines.push("");
-    lines.push(`Added from   : ${source.name} (${source.device})`);
+    lines.push("", `Added from   : ${source.name} (${source.device})`);
     for (const [label, bucket] of [
       ["new", source.added],
       ["updated", source.updated],
@@ -140,20 +304,18 @@ function reportText(report, check) {
     }
   }
 
-  lines.push("");
-  lines.push("In the combined file");
+  lines.push("", "In the combined library");
   for (const table of Object.keys(report.totalsAfter).sort()) {
     const before = report.totalsBefore[table] ?? 0;
     const after = report.totalsAfter[table];
     if (!after) continue;
-    const added = after - before;
+    const gained = after - before;
     lines.push(
-      `  ${table.padEnd(34)}${String(after).padStart(7)}${added ? `  (+${added})` : ""}`
+      `  ${table.padEnd(34)}${String(after).padStart(7)}${gained ? `  (+${gained})` : ""}`
     );
   }
 
-  lines.push("");
-  lines.push("Checked and found in the combined file");
+  lines.push("", "Checked and found in the combined library");
   for (const [table, n] of Object.entries(check.checked).sort()) {
     lines.push(`  ${table.padEnd(34)}${String(n).padStart(7)}`);
   }
@@ -169,6 +331,8 @@ function reportText(report, check) {
   return lines.join("\n");
 }
 
+// -- the merge -------------------------------------------------------------
+
 async function doMerge() {
   const progress = $("progress");
   const progressText = $("progressText");
@@ -182,8 +346,20 @@ async function doMerge() {
   try {
     const engine = await sqlEngine();
 
+    // The remembered library joins the merge as one more input; because the
+    // merge only ever adds, folding it back in is what accumulates history.
+    const inputs = [...added];
+    const stored = storeBroken || !personId ? null : await getPerson(personId);
+    if (stored?.library) {
+      const file = new File([stored.library], stored.libraryName || "remembered.jwlibrary");
+      inputs.push(await BackupFile.open(file));
+    }
+    if (inputs.length < 2) {
+      throw new Error("add at least two backups, or one if a library is remembered");
+    }
+
     // The most recently made backup becomes the starting point.
-    const ordered = [...backups].sort((a, b) =>
+    const ordered = [...inputs].sort((a, b) =>
       a.lastModified < b.lastModified ? 1 : -1
     );
     const [base, ...sources] = ordered;
@@ -215,7 +391,6 @@ async function doMerge() {
     for (const source of checkSources) source.db.close();
 
     progressText.textContent = "Writing the combined file…";
-    const builder = new ZipBuilder();
     const manifest = JSON.parse(JSON.stringify(base.manifest));
     const stamp = new Date().toISOString().slice(0, 10);
     const name = `JW Library COMBINED ${stamp}.jwlibrary`;
@@ -224,6 +399,7 @@ async function doMerge() {
     manifest.userDataBackup.deviceName = "jwsync combined";
     manifest.userDataBackup.hash = "";
 
+    const builder = new ZipBuilder();
     await builder.add("manifest.json", new TextEncoder().encode(JSON.stringify(manifest)));
     await builder.add(base.dbEntry.name, db.export());
     for (const [member, { backup, entry }] of mediaPlan) {
@@ -234,52 +410,82 @@ async function doMerge() {
     merged = { blob: builder.finish("application/octet-stream"), name };
 
     $("report").textContent = reportText(report, check);
-    $("save").hidden = false;
-    $("result").hidden = false;
+    const clean = check.ok && !report.integrityErrors.length;
 
-    const problems = report.integrityErrors.length + check.missing.length;
-    if (check.ok && !report.integrityErrors.length) {
-      banner(
-        $("resultBanner"),
+    // Only remember a result that checked out.
+    let remembered = false;
+    let storeMessage = "";
+    if (clean && !storeBroken && personId) {
+      progressText.textContent = "Remembering it for next time…";
+      try {
+        await rememberLibrary(personId, {
+          blob: merged.blob,
+          name,
+          summary: report.totalsAfter,
+          devices: added.map((b) => ({
+            name: b.deviceName || b.file.name,
+            lastModified: b.lastModified,
+          })),
+        });
+        remembered = true;
+      } catch (error) {
+        storeMessage = ` It could not be remembered for next time: ${error.message}`;
+      }
+    }
+
+    if (clean) {
+      // Count real devices, not the remembered library that joined the merge.
+      const contributing = await storedDeviceCount(added);
+      say(
         "ok",
         "Done — everything is there.",
-        `Every note, highlight, bookmark, tag and playlist from all ` +
-          `${backups.length} backups was found in the combined file ` +
-          `(${megabytes(merged.blob.size)}).`
+        `Every note, highlight, bookmark, tag and playlist from ${contributing}` +
+          ` device${contributing === 1 ? "" : "s"} is in the combined file` +
+          ` (${megabytes(merged.blob.size)}).` +
+          (remembered ? " It is remembered, so next time add only what changed." : "") +
+          storeMessage,
+        { showSave: true }
       );
     } else {
-      banner(
-        $("resultBanner"),
+      const problems = report.integrityErrors.length + check.missing.length;
+      say(
         "warn",
         "Combined, but the check found problems.",
-        `${problems} item(s) could not be confirmed. Open "What changed" below ` +
-          `before you restore this anywhere.`
+        `${problems} item(s) could not be confirmed, so this was not remembered.` +
+          ` Open "What changed" below before you restore this anywhere.`,
+        { showSave: true }
       );
     }
+
+    added = [];
+    renderFiles();
+    await renderLibrary();
+    await showStorageNote();
   } catch (error) {
     merged = null;
-    $("save").hidden = true;
     $("report").textContent = "";
-    banner($("resultBanner"), "err", "It did not work.", error.message);
-    $("result").hidden = false;
+    say("err", "It did not work.", error.message);
   } finally {
     progress.hidden = true;
     progressText.hidden = true;
-    $("merge").disabled = backups.length < 2;
+    updateMergeButton();
   }
 }
 
-function save() {
-  if (!merged) return;
-  const url = URL.createObjectURL(merged.blob);
+// -- saving ----------------------------------------------------------------
+
+function download(blob, name) {
+  const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = merged.name;
+  link.download = name;
   document.body.append(link);
   link.click();
   link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
+
+// -- wiring ----------------------------------------------------------------
 
 $("choose").addEventListener("click", () => $("picker").click());
 $("picker").addEventListener("change", async (event) => {
@@ -287,6 +493,96 @@ $("picker").addEventListener("change", async (event) => {
   event.target.value = "";
 });
 $("merge").addEventListener("click", doMerge);
-$("save").addEventListener("click", save);
 
-renderFiles();
+$("save").addEventListener("click", () => {
+  if (merged) download(merged.blob, merged.name);
+});
+
+$("saveStored").addEventListener("click", async () => {
+  const stored = await getPerson(personId);
+  if (stored?.library) {
+    download(stored.library, stored.libraryName || "JW Library COMBINED.jwlibrary");
+  }
+});
+
+$("forget").addEventListener("click", async () => {
+  const person = currentPerson();
+  if (
+    !confirm(
+      `Forget the remembered library for ${person?.name || "this person"}?` +
+        " Your device backups and any file you have saved are untouched," +
+        " but next time you will have to add a backup from every device again."
+    )
+  ) {
+    return;
+  }
+  await forgetLibrary(personId);
+  await renderLibrary();
+  await showStorageNote();
+});
+
+$("managePeople").addEventListener("click", () => {
+  const editor = $("peopleEditor");
+  editor.hidden = !editor.hidden;
+  $("managePeople").textContent = editor.hidden ? "Manage" : "Done";
+});
+
+$("person").addEventListener("change", async (event) => {
+  personId = event.target.value;
+  rememberCurrentPerson(personId);
+  added = [];
+  merged = null;
+  $("result").hidden = true;
+  renderPeople();
+  renderFiles();
+  await renderLibrary();
+});
+
+$("personName").addEventListener("change", async (event) => {
+  const name = event.target.value.trim();
+  if (!name || !personId) return;
+  await renamePerson(personId, name);
+  people = await listPeople();
+  renderPeople();
+});
+
+$("addPerson").addEventListener("click", async () => {
+  const name = prompt("Whose library is this?", "");
+  if (name === null) return;
+  const person = await createPerson(name || "Someone");
+  people = await listPeople();
+  personId = person.id;
+  rememberCurrentPerson(personId);
+  added = [];
+  merged = null;
+  $("result").hidden = true;
+  renderPeople();
+  renderFiles();
+  await renderLibrary();
+});
+
+$("removePerson").addEventListener("click", async () => {
+  const person = currentPerson();
+  if (people.length < 2 || !person) return;
+  if (
+    !confirm(
+      `Remove ${person.name} and the library remembered for them?` +
+        " Their device backups and any saved file are untouched."
+    )
+  ) {
+    return;
+  }
+  await deletePerson(person.id);
+  people = await listPeople();
+  personId = people[0]?.id || null;
+  rememberCurrentPerson(personId);
+  renderPeople();
+  await renderLibrary();
+});
+
+(async () => {
+  await loadPeople();
+  renderFiles();
+  await renderLibrary();
+  await showStorageNote();
+})();

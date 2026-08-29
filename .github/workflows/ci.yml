@@ -32,5 +32,10 @@ jobs:
       - name: Lint
         run: ruff check src tests
 
+      - name: Browser storage tests
+        run: |
+          npm install --no-save fake-indexeddb
+          npm test
+
       - name: Test
         run: python -m pytest -q
