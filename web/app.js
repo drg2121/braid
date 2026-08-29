@@ -98,7 +98,7 @@ async function loadPeople() {
   } catch (error) {
     storeBroken = true;
     people = [];
-    $("personCard").hidden = true;
+    $("person").hidden = true;
     $("libraryCard").hidden = true;
     $("storageNote").textContent =
       `This browser cannot remember anything (${error.message}), so you will` +
@@ -125,6 +125,9 @@ function renderPeople() {
     option.selected = person.id === personId;
     select.append(option);
   }
+  // With only one person there is nothing to choose between, so the chooser
+  // stays out of the way until someone adds a second.
+  select.hidden = people.length < 2;
   $("personName").value = currentPerson()?.name || "";
   $("removePerson").disabled = people.length < 2;
 }
@@ -173,6 +176,15 @@ async function renderLibrary() {
   }
 
   updateMergeButton();
+}
+
+/** The privacy line promises offline use; only promise what is actually true. */
+function setPrivacyLine(worksOffline) {
+  const offline =
+    worksOffline || location.protocol === "file:" || window.JWSYNC_WASM_BASE64;
+  $("privacy").textContent =
+    "Nothing is uploaded. Everything happens on this device" +
+    (offline ? ", and this page works with no internet." : ".");
 }
 
 async function showStorageNote() {
@@ -251,12 +263,25 @@ async function hasStoredLibrary() {
   return Boolean(stored?.library);
 }
 
+/** Whether there is enough on hand to combine anything. */
+async function canCombine() {
+  // One new backup is enough when there is already a library to add it to.
+  return added.length >= ((await hasStoredLibrary()) ? 1 : 2);
+}
+
 async function updateMergeButton() {
   const stored = await hasStoredLibrary();
-  // One new backup is enough when there is already a remembered library.
   const enough = added.length >= (stored ? 1 : 2);
   $("merge").disabled = !enough;
-  $("merge").textContent = stored ? "Add to the remembered library" : "Combine";
+  // Combining starts by itself when a backup is added, so this button is only
+  // a way back in if that did not happen -- it stays hidden otherwise.
+  $("merge").hidden = !enough;
+
+  $("choose").textContent = added.length
+    ? "Add another backup"
+    : stored
+      ? "Add the new backup"
+      : "Choose a backup";
 }
 
 async function addFiles(fileList) {
@@ -274,7 +299,16 @@ async function addFiles(fileList) {
   renderFiles();
   if (problems.length) {
     say("err", "Some files could not be opened.", problems.join(" "));
+    return;
   }
+
+  // Combine straight away rather than making someone find a second button.
+  // This only ever writes a new file; the backups that went in are untouched,
+  // so there is nothing to undo if it was not what they meant.
+  //
+  // The decision is computed rather than read off the button, whose state is
+  // updated asynchronously and would still say "not yet" at this point.
+  if (await canCombine()) await doMerge();
 }
 
 // -- the report ------------------------------------------------------------
@@ -521,12 +555,6 @@ $("forget").addEventListener("click", async () => {
   await showStorageNote();
 });
 
-$("managePeople").addEventListener("click", () => {
-  const editor = $("peopleEditor");
-  editor.hidden = !editor.hidden;
-  $("managePeople").textContent = editor.hidden ? "Manage" : "Done";
-});
-
 $("person").addEventListener("change", async (event) => {
   personId = event.target.value;
   rememberCurrentPerson(personId);
@@ -580,9 +608,52 @@ $("removePerson").addEventListener("click", async () => {
   await renderLibrary();
 });
 
+/**
+ * Offer to keep the page on the home screen, where it behaves like an app.
+ *
+ * Whether it also works offline depends on the service worker having
+ * registered, so that half of the sentence is only said when it is true.
+ */
+function showInstallHint(worksOffline) {
+  const standalone =
+    window.matchMedia?.("(display-mode: standalone)").matches ||
+    window.navigator.standalone === true;
+  if (standalone || location.protocol === "file:") return;
+
+  const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const how = iOS
+    ? "tap the Share button, then Add to Home Screen"
+    : "install it from your browser's menu";
+  $("installHint").textContent =
+    `Keep this handy: ${how}. It then opens like an app` +
+    (worksOffline ? " and works without internet." : ".");
+  $("installHint").hidden = false;
+}
+
+/**
+ * Cache the page so it opens with no network.
+ *
+ * Returns whether it worked. Some browsers refuse outright, and offline use is
+ * a convenience rather than a requirement, so a refusal changes what the page
+ * claims instead of interrupting anyone.
+ */
+async function registerWorker() {
+  if (!("serviceWorker" in navigator)) return false;
+  if (location.protocol === "file:") return false; // one local file, nothing to cache
+  try {
+    await navigator.serviceWorker.register("./sw.js");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 (async () => {
   await loadPeople();
   renderFiles();
   await renderLibrary();
   await showStorageNote();
+  const worksOffline = await registerWorker();
+  setPrivacyLine(worksOffline);
+  showInstallHint(worksOffline);
 })();

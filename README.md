@@ -50,6 +50,12 @@ Files. Because bundling drops every module into one scope, it refuses to build
 when two modules declare the same top-level name -- a collision that otherwise
 surfaces only as a dead page and a `SyntaxError` in a console nobody has open.
 
+Combining starts as soon as a backup is added -- it only ever writes a new file
+and never touches the inputs, so there is nothing to undo and no reason to make
+someone find a second button. The page installs to a home screen and caches
+itself for offline use, and says it works offline only when the cache actually
+took, since some browsers refuse.
+
 The page remembers the combined library in IndexedDB, per person, so the next
 round needs only a fresh backup from the device that was actually used rather
 than one from every device. Several people can share one browser without their

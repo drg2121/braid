@@ -1,0 +1,19 @@
+{
+  "name": "jwsync",
+  "short_name": "jwsync",
+  "description": "Combine JW Library backups from several devices into one.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f4f4f7",
+  "theme_color": "#5a2d8c",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import json
 import re
 from pathlib import Path
 
@@ -18,6 +19,9 @@ HERE = Path(__file__).parent
 
 # Module order matters: each may only import from ones already inlined.
 MODULES = ["wal.js", "jwlibrary.js", "merge.js", "verify.js", "store.js", "app.js"]
+
+# Inlined so the single file has no siblings to fetch.
+INLINE_ASSETS = ["icon.svg", "manifest.webmanifest"]
 
 
 def strip_module_syntax(source: str, name: str) -> str:
@@ -102,6 +106,25 @@ def build(out_path: Path) -> Path:
         "})();\n"
         "</script>"
     )
+
+    # A single file has nothing beside it to link to, so the icon and the
+    # manifest are inlined and the service worker is dropped entirely -- there
+    # is nothing to cache when the whole page is already one local file.
+    icon = (HERE / "icon.svg").read_text(encoding="utf-8")
+    icon_data = "data:image/svg+xml;base64," + base64.b64encode(
+        icon.encode("utf-8")
+    ).decode("ascii")
+    manifest = json.loads((HERE / "manifest.webmanifest").read_text(encoding="utf-8"))
+    manifest["icons"] = [
+        {**i, "src": icon_data} for i in manifest.get("icons", [])
+    ]
+    manifest_data = "data:application/manifest+json;base64," + base64.b64encode(
+        json.dumps(manifest).encode("utf-8")
+    ).decode("ascii")
+
+    html = html.replace('href="./icon.svg"', f'href="{icon_data}"')
+    html = html.replace('src="./icon.svg"', f'src="{icon_data}"')
+    html = html.replace('href="./manifest.webmanifest"', f'href="{manifest_data}"')
 
     marker_start = html.index("<!-- sql.js ships")
     marker_end = html.index("</body>", marker_start)

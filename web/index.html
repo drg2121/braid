@@ -4,6 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#5a2d8c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="jwsync">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icon.svg">
 <title>jwsync</title>
 <style>
   :root {
@@ -42,10 +48,12 @@
     font: 17px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     -webkit-text-size-adjust: 100%;
   }
-  main { max-width: 44rem; margin: 0 auto; }
-  header { margin-bottom: 1rem; }
-  h1 { font-size: 1.6rem; margin: 0 0 .3rem; letter-spacing: -0.01em; }
-  .lede { color: var(--muted); margin: 0; font-size: .97rem; }
+  main { max-width: 42rem; margin: 0 auto; }
+
+  header { display: flex; align-items: center; gap: .7rem; margin-bottom: 1rem; }
+  header img { width: 40px; height: 40px; border-radius: 10px; }
+  h1 { font-size: 1.45rem; margin: 0; letter-spacing: -0.01em; }
+  header .who { margin-left: auto; }
 
   section {
     background: var(--panel);
@@ -66,12 +74,13 @@
     padding: .85rem 1.2rem; background: var(--accent); color: var(--accent-ink);
     cursor: pointer; width: 100%; min-height: 48px;
   }
+  button.big { font-size: 1.08rem; padding: 1.05rem 1.2rem; min-height: 58px; }
   button.secondary {
     background: transparent; color: var(--accent); border: 1.5px solid var(--line);
   }
   button.quiet {
     background: none; border: 0; color: var(--muted); font-weight: 600;
-    font-size: .88rem; padding: .5rem 0; min-height: 0; width: auto;
+    font-size: .88rem; padding: .4rem 0; min-height: 0; width: auto;
   }
   button:disabled { opacity: .45; cursor: default; }
   button + button { margin-top: .6rem; }
@@ -81,7 +90,7 @@
   ul { list-style: none; padding: 0; margin: 0; }
   li.item {
     display: flex; gap: .75rem; align-items: flex-start;
-    padding: .75rem 0; border-top: 1px solid var(--line);
+    padding: .7rem 0; border-top: 1px solid var(--line);
   }
   li.item:first-child { border-top: 0; padding-top: 0; }
   .item .name { font-weight: 600; word-break: break-word; }
@@ -101,11 +110,16 @@
 
   .empty { color: var(--muted); font-size: .93rem; margin: 0 0 .9rem; }
 
-  .banner { border-radius: 11px; padding: .85rem 1rem; margin-bottom: .9rem; font-size: .93rem; }
+  .banner { border-radius: 11px; padding: .85rem 1rem; font-size: .93rem; }
+  .banner + * { margin-top: .9rem; }
   .banner.ok { background: var(--ok-bg); color: var(--ok-ink); }
   .banner.warn { background: var(--warn-bg); color: var(--warn-ink); }
   .banner.err { background: var(--err-bg); color: var(--err-ink); }
   .banner strong { display: block; margin-bottom: .2rem; }
+  .privacy {
+    color: var(--muted); font-size: .87rem; text-align: center;
+    margin: 0 0 1rem;
+  }
 
   .field { margin-bottom: .9rem; }
   label { display: block; font-weight: 600; font-size: .93rem; margin-bottom: .35rem; }
@@ -115,12 +129,13 @@
     min-height: 48px;
   }
 
-  progress { width: 100%; height: 8px; margin-top: .7rem; }
+  progress { width: 100%; height: 8px; margin-top: .8rem; }
 
-  details { margin-top: .9rem; }
+  details { border-top: 1px solid var(--line); padding-top: .3rem; margin-top: .9rem; }
+  details:first-of-type { border-top: 0; }
   summary {
     cursor: pointer; font-weight: 600; font-size: .93rem; color: var(--accent);
-    padding: .4rem 0;
+    padding: .55rem 0; list-style-position: outside;
   }
   pre {
     background: var(--bg); border: 1px solid var(--line); border-radius: 10px;
@@ -132,6 +147,7 @@
   ol.steps li:last-child { margin-bottom: 0; }
   code { background: var(--bg); border-radius: 5px; padding: .1rem .3rem; font-size: .87em; }
   .hint { color: var(--muted); font-size: .87rem; margin: .6rem 0 0; }
+  .hint:first-child { margin-top: 0; }
   input[type=file] { display: none; }
   [hidden] { display: none !important; }
 </style>
@@ -139,79 +155,38 @@
 <body>
 <main>
   <header>
+    <img src="./icon.svg" alt="">
     <h1>jwsync</h1>
-    <p class="lede">Keep your notes, highlights, bookmarks and playlists the same
-    on every device you use JW Library on.</p>
+    <select id="person" class="who" aria-label="Whose library" hidden></select>
   </header>
 
-  <div class="banner ok">
-    <strong>Nothing is uploaded.</strong>
-    Everything happens inside this page, on this device. Your backups are never
-    sent anywhere, and once this page has opened it works with no internet at all.
-  </div>
-
-  <section id="personCard">
-    <h2>Whose library <button class="quiet" id="managePeople">Manage</button></h2>
-    <select id="person" aria-label="Whose library"></select>
-    <div id="peopleEditor" hidden>
-      <div class="field" style="margin-top:.9rem">
-        <label for="personName">Name</label>
-        <input type="text" id="personName" placeholder="Cosmin">
-      </div>
-      <div class="row">
-        <button class="secondary" id="addPerson">Add someone else</button>
-        <button class="secondary" id="removePerson">Remove this person</button>
-      </div>
-      <p class="hint">Each person keeps their own library and their own devices.
-      Useful on a shared tablet, or if you help someone else with theirs.</p>
-    </div>
-  </section>
+  <p class="privacy" id="privacy">Nothing is uploaded. Everything happens on this
+  device, and once opened this page works with no internet.</p>
 
   <section id="libraryCard" hidden>
-    <h2>Remembered library <span class="side" id="libraryUpdated"></span></h2>
+    <h2>Your library <span class="side" id="libraryUpdated"></span></h2>
     <div class="stats" id="librarySummary"></div>
     <p class="hint" style="margin-top:0">From these devices:</p>
     <ul id="devices"></ul>
-    <div class="row" style="margin-top:.9rem">
-      <button id="saveStored">Save this file</button>
-      <button class="secondary" id="forget">Forget it</button>
-    </div>
-    <p class="hint">Because this is remembered, next time you only need a fresh
-    backup from the device you actually used.</p>
   </section>
 
   <section>
     <h2>Add a backup</h2>
-    <p class="empty" id="empty">Choose the <code>.jwlibrary</code> backup you made
-    on a device. You can add several at once. A zipped copy of JW Library's own
-    <code>Userdata</code> folder works too, which is what lets a Shortcut fetch
-    a library with no tapping.</p>
+    <p class="empty" id="empty">Choose the backup you made on a device. The first
+    time you need one from every device; after that, only the one you used.</p>
     <ul id="files"></ul>
     <input type="file" id="picker" multiple accept=".jwlibrary,.zip,application/zip">
-    <button class="secondary" id="choose">Choose backup files</button>
-  </section>
-
-  <section>
-    <h2>Combine</h2>
-    <div class="field">
-      <label for="inputFields">If a study answer differs between devices</label>
-      <select id="inputFields">
-        <option value="keep">Keep the most recent answer</option>
-        <option value="overwrite">Take the other device's answer</option>
-      </select>
-    </div>
-    <button id="merge" disabled>Combine</button>
+    <button class="big" id="choose">Choose a backup</button>
+    <button class="secondary" id="merge" hidden>Combine now</button>
     <progress id="progress" hidden></progress>
     <p class="hint" id="progressText" hidden></p>
   </section>
 
   <section id="result" hidden>
-    <h2>Result</h2>
     <div id="resultBanner"></div>
-    <button id="save">Save the combined file</button>
-    <p class="hint">Save it where your devices can reach it, then on each device
-    open JW Library and go to Personal Study, tap the ⤒ icon, and choose
-    Restore Backup.</p>
+    <button class="big" id="save">Save the combined file</button>
+    <p class="hint">Save it to Files, then on each device open JW Library and go
+    to <strong>Personal Study ▸ ⤒ ▸ Restore Backup</strong> and pick it.</p>
     <details>
       <summary>What changed</summary>
       <pre id="report"></pre>
@@ -219,24 +194,45 @@
   </section>
 
   <section>
-    <h2>How to use this</h2>
+    <h2>How this works</h2>
     <ol class="steps">
-      <li>On a device where you have made notes: JW Library ▸
+      <li>On a device where you made notes: JW Library ▸
       <strong>Personal Study</strong> ▸ the <strong>⤒</strong> icon ▸
       <strong>Create Backup</strong>. Save it to Files.</li>
-      <li>Come back here, add that backup, and tap <strong>Combine</strong>.</li>
-      <li>Save the combined file.</li>
-      <li>On each device: <strong>Personal Study ▸ ⤒ ▸ Restore Backup</strong>,
-      and pick the combined file.</li>
+      <li>Come back here and add it. Combining starts on its own.</li>
+      <li>Save the combined file, and restore it on each device.</li>
     </ol>
-    <p class="hint"><strong>The first time</strong>, add a backup from every
-    device. After that this page remembers everything, so you only need to add
-    the device you actually used.</p>
+    <p class="hint" id="installHint" hidden></p>
     <p class="hint"><strong>Restoring replaces</strong> what is on that device.
     That is the point — the combined file has everything — but it is why you
     restore the combined file and never one device's own backup. Keep your
     original backups until you have checked that everything is there.</p>
-    <p class="hint" id="storageNote"></p>
+
+    <details>
+      <summary>Settings</summary>
+      <div class="field" style="margin-top:.7rem">
+        <label for="inputFields">If a study answer differs between devices</label>
+        <select id="inputFields">
+          <option value="keep">Keep the most recent answer</option>
+          <option value="overwrite">Take the other device's answer</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="personName">Whose library this is</label>
+        <input type="text" id="personName" placeholder="Me">
+      </div>
+      <div class="row">
+        <button class="secondary" id="addPerson">Add someone else</button>
+        <button class="secondary" id="removePerson">Remove this person</button>
+      </div>
+      <p class="hint">Each person keeps their own library and their own devices.
+      Useful on a shared tablet, or if you help someone else with theirs.</p>
+      <div class="row" style="margin-top:.9rem">
+        <button class="secondary" id="saveStored">Save the stored file</button>
+        <button class="secondary" id="forget">Forget this library</button>
+      </div>
+      <p class="hint" id="storageNote"></p>
+    </details>
   </section>
 </main>
 <!-- sql.js ships as a classic script that defines window.initSqlJs. -->

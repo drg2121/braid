@@ -35,31 +35,37 @@ on reading below.
 
 ## Using the web page
 
+### Put it on your home screen first
+
+Open the page (your congregation's link, or the `jwsync.html` file if someone
+sent you one). On an iPhone or iPad, tap the **Share** button and then **Add to
+Home Screen**. It then opens like an app, in one tap, and keeps working with no
+internet.
+
 ### The first time
 
-1. Open the page (your congregation's link, or the `jwsync.html` file if someone
-   sent you one).
-2. On **each** device: JW Library ▸ **Personal Study** ▸ the **⤒** icon ▸
+1. On **each** device: JW Library ▸ **Personal Study** ▸ the **⤒** icon ▸
    **Create Backup**, and save it to Files.
-3. On the page, tap **Choose backup files** and pick all of them.
-4. Tap **Combine**. It tells you when it is done and confirms that every note,
+2. Open jwsync, tap **Choose a backup**, and pick all of them.
+3. Combining starts on its own. When it finishes it confirms that every note,
    highlight, bookmark, tag and playlist was found in the result.
-5. Tap **Save the combined file** and save it to Files.
-6. On each device: **Personal Study ▸ ⤒ ▸ Restore Backup**, and pick that file.
+4. Tap **Save the combined file** and save it to Files.
+5. On each device: **Personal Study ▸ ⤒ ▸ Restore Backup**, and pick that file.
 
 ### Every time after that
 
-The page remembers your combined library, so you only need a fresh backup from
-the device you actually used:
+jwsync remembers your combined library, so you only need a fresh backup from the
+device you actually used:
 
 1. On that one device: **Personal Study ▸ ⤒ ▸ Create Backup**.
-2. Open the page. It already shows your library — how many highlights and notes
+2. Open jwsync. It already shows your library — how many highlights and notes
    are in it, and which devices it draws on.
-3. Add that one backup and tap **Add to the remembered library**.
+3. Tap **Add the new backup** and pick it. Combining starts on its own.
 4. Save the result and restore it wherever you want it.
 
-You can add as many devices as you like: a phone, a tablet, a second tablet, a
-computer. Each one just needs to have contributed a backup once.
+That is three taps and a file picker. You can have as many devices as you like:
+a phone, a tablet, a second tablet, a computer. Each one just needs to have
+contributed a backup once.
 
 ### Skipping the export tap, with a Shortcut
 
@@ -97,9 +103,10 @@ restoring replaces everything, and it should be deliberate.
 
 ### More than one person
 
-If a tablet is shared, or you help someone else with theirs, tap **Manage** at
-the top and **Add someone else**. Each person keeps their own library and their
-own devices, and they never mix.
+If a tablet is shared, or you help someone else with theirs, open **Settings**
+at the bottom and tap **Add someone else**. A chooser then appears at the top of
+the page. Each person keeps their own library and their own devices, and they
+never mix.
 
 ### Where all this is kept
 
@@ -107,9 +114,9 @@ On your device, in the browser, and nowhere else. Nothing is uploaded. With the
 page open you can turn the internet off entirely and it still works.
 
 The browser may clear what it remembers if the device runs very low on space —
-the page tells you how much room it is using. Nothing is lost when that happens
-as long as you have saved the combined file, which is why step 5 matters. To
-clear it yourself, tap **Forget it**.
+**Settings** shows how much room it is using. Nothing is lost when that happens
+as long as you have saved the combined file, which is why that step matters. To
+clear it yourself, open **Settings** and tap **Forget this library**.
 
 > **Restoring replaces** what is on that device. That is the point — the combined
 > file has everything from every device — but it is why you restore the
