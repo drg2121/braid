@@ -158,7 +158,10 @@ class Backup:
         if prefix:
             nested = target / prefix.rstrip("/")
             for entry in list(nested.iterdir()):
-                entry.rename(target / entry.name)
+                # replace(), not rename(): on Windows rename() refuses when
+                # something is already there, and a stale top-level file must
+                # not stop a folder from being read.
+                entry.replace(target / entry.name)
             nested.rmdir()
 
         db_path = target / DB_NAME

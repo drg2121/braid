@@ -51,7 +51,7 @@ const paths = process.argv.slice(3);
 const backups = [];
 for (const path of paths) {
   const blob = await openAsBlob(path);
-  Object.defineProperty(blob, "name", { value: path.split("/").pop() });
+  Object.defineProperty(blob, "name", { value: path.split(/[\\/]/).pop() });
   backups.push(await BackupFile.open(blob));
 }
 backups.sort((a, b) => (a.lastModified < b.lastModified ? 1 : -1));

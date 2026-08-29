@@ -89,10 +89,10 @@ def test_sync_merges_a_folder_and_records_state(builder, tmp_path, capsys):
 
     a = builder("phone.jwlibrary", "Phone", NEWER)
     a.tag("phone-tag")
-    a.build().rename(folder / "phone.jwlibrary")
+    a.build().replace(folder / "phone.jwlibrary")
     b = builder("tablet.jwlibrary", "Tablet", OLDER)
     b.tag("tablet-tag")
-    b.build().rename(folder / "tablet.jwlibrary")
+    b.build().replace(folder / "tablet.jwlibrary")
 
     assert main(["sync", str(folder)]) == 0
     capsys.readouterr()
@@ -112,8 +112,8 @@ def test_sync_merges_a_folder_and_records_state(builder, tmp_path, capsys):
 def test_sync_is_a_no_op_when_nothing_changed(builder, tmp_path, capsys):
     folder = tmp_path / "shared"
     folder.mkdir()
-    builder("phone.jwlibrary", "Phone", NEWER).build().rename(folder / "phone.jwlibrary")
-    builder("tablet.jwlibrary", "Tablet", OLDER).build().rename(
+    builder("phone.jwlibrary", "Phone", NEWER).build().replace(folder / "phone.jwlibrary")
+    builder("tablet.jwlibrary", "Tablet", OLDER).build().replace(
         folder / "tablet.jwlibrary"
     )
 
@@ -126,8 +126,8 @@ def test_sync_is_a_no_op_when_nothing_changed(builder, tmp_path, capsys):
 def test_sync_ignores_its_own_previous_output(builder, tmp_path, capsys):
     folder = tmp_path / "shared"
     folder.mkdir()
-    builder("phone.jwlibrary", "Phone", NEWER).build().rename(folder / "phone.jwlibrary")
-    builder("tablet.jwlibrary", "Tablet", OLDER).build().rename(
+    builder("phone.jwlibrary", "Phone", NEWER).build().replace(folder / "phone.jwlibrary")
+    builder("tablet.jwlibrary", "Tablet", OLDER).build().replace(
         folder / "tablet.jwlibrary"
     )
 
@@ -144,7 +144,7 @@ def test_sync_ignores_its_own_previous_output(builder, tmp_path, capsys):
 def test_sync_needs_at_least_two_backups(builder, tmp_path, capsys):
     folder = tmp_path / "shared"
     folder.mkdir()
-    builder("phone.jwlibrary", "Phone", NEWER).build().rename(folder / "phone.jwlibrary")
+    builder("phone.jwlibrary", "Phone", NEWER).build().replace(folder / "phone.jwlibrary")
     assert main(["sync", str(folder)]) == 1
     assert "need at least two" in capsys.readouterr().err
 
@@ -163,8 +163,8 @@ def test_sync_never_overwrites_an_existing_backup_in_the_folder(
 ):
     folder = tmp_path / "shared"
     folder.mkdir()
-    builder("phone.jwlibrary", "Phone", NEWER).build().rename(folder / "phone.jwlibrary")
-    builder("tablet.jwlibrary", "Tablet", OLDER).build().rename(
+    builder("phone.jwlibrary", "Phone", NEWER).build().replace(folder / "phone.jwlibrary")
+    builder("tablet.jwlibrary", "Tablet", OLDER).build().replace(
         folder / "tablet.jwlibrary"
     )
 

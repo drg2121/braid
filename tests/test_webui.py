@@ -28,12 +28,12 @@ def two_backups(builder, tmp_path):
     a = builder("phone.jwlibrary", "Phone", NEWER)
     a.tag("phone-tag")
     a.location(BookNumber=40, ChapterNumber=5, KeySymbol="nwtsty")
-    a.build().rename(folder / "phone.jwlibrary")
+    a.build().replace(folder / "phone.jwlibrary")
 
     b = builder("tablet.jwlibrary", "Tablet", OLDER)
     b.tag("tablet-tag")
     b.location(BookNumber=41, ChapterNumber=1, KeySymbol="nwtsty")
-    b.build().rename(folder / "tablet.jwlibrary")
+    b.build().replace(folder / "tablet.jwlibrary")
     return folder
 
 

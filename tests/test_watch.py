@@ -38,7 +38,7 @@ def drop(builder, folder: Path, name: str, device: str, stamp: str, tag: str) ->
     b.location(BookNumber=40, ChapterNumber=5, KeySymbol="nwtsty")
     built = b.build()
     target = folder / f"{name}.jwlibrary"
-    built.rename(target)
+    built.replace(target)
     return target
 
 
@@ -95,7 +95,7 @@ def test_a_new_export_from_a_device_is_picked_up(builder, folder):
     b = builder("tablet2.jwlibrary", "Tablet", "2026-09-01T00:00:00+0000")
     b.tag("tablet-tag")
     b.tag("brand-new-tag")
-    b.build().rename(folder / "tablet.jwlibrary")
+    b.build().replace(folder / "tablet.jwlibrary")
 
     lines, log = log_lines()
     watch(folder, once=True, log=log)
