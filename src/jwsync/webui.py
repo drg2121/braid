@@ -18,10 +18,16 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from .archive import Backup, unique_path, write_backup
+from .local import (
+    LocalLibrary,
+    LocalLibraryError,
+    default_device_name,
+    find_libraries,
+)
 from .merge import MergeOptions, merge_backups
 from .verify import verify
 
-PAGE = """<!doctype html>
+PAGE = r"""<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -98,6 +104,20 @@ PAGE = """<!doctype html>
     <p class="hint">A folder that iCloud Drive, Google Drive or Dropbox already
     syncs works well: export a backup from each device into it, then merge.</p>
     <ul class="files" id="files"></ul>
+  </section>
+
+  <section id="localCard" hidden>
+    <label>JW Library on this computer</label>
+    <div class="meta" id="localInfo"></div>
+    <div class="row" style="margin-top:.8rem">
+      <div style="flex:0 0 auto">
+        <button id="pull" class="secondary">Add it to the folder</button>
+      </div>
+      <div style="flex:0 0 auto">
+        <button id="push" class="secondary">Put the merged library back into it</button>
+      </div>
+    </div>
+    <p class="hint" id="localHint"></p>
   </section>
 
   <section>
@@ -197,15 +217,98 @@ async function merge() {
       ? "Merged and verified — every item from every backup is in " + data.output
       : "Merged into " + data.output + ", but the check found problems. Read the report.";
     $("status").className = "status " + (bad ? "warn" : "ok");
+    lastMerged = data.output;
+    loadLocal();
   } catch (err) {
     $("status").textContent = err.message;
     $("status").className = "status err";
   } finally { updateButton(); }
 }
 
+let lastMerged = null;
+
+async function loadLocal() {
+  try {
+    const res = await fetch("/api/local");
+    const data = await res.json();
+    if (!data.found) return;
+    $("localCard").hidden = false;
+    $("localInfo").textContent =
+      `${data.path} — schema v${data.schemaVersion}`
+      + ` · ${data.counts} items · app is ${data.running ? "open" : "closed"}`;
+    $("push").disabled = data.running || !lastMerged;
+    $("localHint").textContent = data.running
+      ? "Quit JW Library before putting a merged library back into it — writing "
+        + "while it is open can damage it."
+      : "Your current library is copied aside before anything is written.";
+  } catch (err) { /* no local library is a normal situation */ }
+}
+
+async function pullLocal() {
+  const folder = $("folder").value.trim();
+  if (!folder) { $("status").textContent = "Choose a folder first."; return; }
+  $("pull").disabled = true;
+  $("status").textContent = "Exporting this computer's library…";
+  $("status").className = "status";
+  try {
+    const res = await fetch("/api/local/pull", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ folder }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "export failed");
+    $("status").textContent = "Added " + data.output;
+    $("status").className = "status ok";
+    await scan();
+  } catch (err) {
+    $("status").textContent = err.message;
+    $("status").className = "status err";
+  } finally { $("pull").disabled = false; }
+}
+
+async function pushLocal() {
+  if (!lastMerged) return;
+  if (!confirm(
+    "This replaces the JW Library on this computer with the merged library.\n\n"
+    + "Your current library is copied aside first. Continue?")) return;
+  $("push").disabled = true;
+  $("status").textContent = "Updating this computer's library…";
+  $("status").className = "status";
+  try {
+    const res = await fetch("/api/local/push", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ backup: lastMerged }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "update failed");
+    $("status").textContent =
+      "This computer is up to date. Previous library saved to " + data.safetyCopy;
+    $("status").className = "status ok";
+  } catch (err) {
+    $("status").textContent = err.message;
+    $("status").className = "status err";
+  } finally { loadLocal(); }
+}
+
+$("pull").addEventListener("click", pullLocal);
+$("push").addEventListener("click", pushLocal);
 $("scan").addEventListener("click", scan);
 $("folder").addEventListener("keydown", (e) => { if (e.key === "Enter") scan(); });
 $("merge").addEventListener("click", merge);
+
+try {
+  const saved = localStorage.getItem("jwsync.folder");
+  if (saved) { $("folder").value = saved; scan(); }
+} catch (err) { /* private windows and blocked storage are fine */ }
+
+$("folder").addEventListener("change", () => {
+  try { localStorage.setItem("jwsync.folder", $("folder").value.trim()); }
+  catch (err) { /* nothing to do if storage is unavailable */ }
+});
+
+loadLocal();
 </script>
 </body>
 </html>
@@ -282,6 +385,53 @@ def _merge(payload: dict) -> dict:
             backup.close()
 
 
+def _local_info() -> dict:
+    found = find_libraries()
+    if not found:
+        return {"found": False}
+    library = found[0]
+    counts = library.counts()
+    return {
+        "found": True,
+        "path": str(library.path),
+        "schemaVersion": library.schema_version(),
+        "running": library.is_running(),
+        "counts": sum(counts.values()),
+    }
+
+
+def _local_pull(payload: dict) -> dict:
+    found = find_libraries()
+    if not found:
+        raise LocalLibraryError("no JW Library installation found on this computer")
+    folder = Path(payload.get("folder", "")).expanduser()
+    if not folder.is_dir():
+        raise LocalLibraryError(f"{folder} is not a folder")
+    name = default_device_name()
+    out = found[0].export(
+        folder / f"UserdataBackup_{name}_local.jwlibrary", device_name=name
+    )
+    return {"output": str(out)}
+
+
+def _local_push(payload: dict) -> dict:
+    found = find_libraries()
+    if not found:
+        raise LocalLibraryError("no JW Library installation found on this computer")
+    library: LocalLibrary = found[0]
+    backup = Path(payload.get("backup", "")).expanduser()
+    if not backup.is_file():
+        raise LocalLibraryError(f"{backup} does not exist")
+
+    check = verify(backup, [backup])
+    if not check.ok:
+        raise LocalLibraryError(
+            f"{backup.name} does not verify against itself; refusing to install it"
+        )
+    result = library.install(backup)
+    return {"safetyCopy": result["safetyCopy"], "mediaCopied": result["mediaCopied"]}
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = "jwsync"
 
@@ -307,6 +457,13 @@ class Handler(BaseHTTPRequestHandler):
             self.wfile.write(body)
             return
 
+        if parsed.path == "/api/local":
+            try:
+                self._json(200, _local_info())
+            except Exception as exc:
+                self._json(200, {"found": False, "error": str(exc)})
+            return
+
         if parsed.path == "/api/scan":
             folder = Path(
                 parse_qs(parsed.query).get("folder", [""])[0]
@@ -320,13 +477,20 @@ class Handler(BaseHTTPRequestHandler):
         self._json(404, {"error": "not found"})
 
     def do_POST(self) -> None:
-        if urlparse(self.path).path != "/api/merge":
+        route = urlparse(self.path).path
+        handlers = {
+            "/api/merge": _merge,
+            "/api/local/pull": _local_pull,
+            "/api/local/push": _local_push,
+        }
+        handler = handlers.get(route)
+        if handler is None:
             self._json(404, {"error": "not found"})
             return
         length = int(self.headers.get("Content-Length", "0"))
         try:
             payload = json.loads(self.rfile.read(length) or b"{}")
-            self._json(200, _merge(payload))
+            self._json(200, handler(payload))
         except Exception as exc:
             self._json(400, {"error": str(exc)})
 

@@ -34,7 +34,12 @@ laptop.jwlibrary ─┘
 
 ## Install
 
-Python 3.10 or newer. No third-party dependencies.
+**If you are not a developer**, read [GUIDE.md](GUIDE.md) instead — it covers
+everything without a terminal. In short: download the ZIP, unzip it, and
+double-click a launcher in `launchers/`.
+
+Python 3.9 or newer, no third-party dependencies. macOS ships a suitable Python
+already, so on a Mac there is nothing to install at all.
 
 ```bash
 pip install -e .
@@ -47,6 +52,16 @@ python -m jwsync --help
 ```
 
 ## Use it
+
+### Point and click
+
+```bash
+jwsync serve
+```
+
+Opens `http://127.0.0.1:8765` — pick a folder, add this computer's own library
+with one button, merge, and put the result back. Binds to localhost only. This is
+what the launchers in `launchers/` start.
 
 ### Look at a backup
 
@@ -184,16 +199,6 @@ folder, skips its own previous output, writes a timestamped merged file, and
 records what it did in `.jwsync-state.json`. Run it again after nothing has
 changed and it tells you so instead of writing another copy.
 
-### Local web interface
-
-```bash
-jwsync serve
-```
-
-Opens `http://127.0.0.1:8765` — point it at a folder, tick the backups you want,
-merge. It binds to localhost only and works on folder paths rather than uploads,
-because real libraries run to hundreds of megabytes.
-
 ### Check that a merge lost nothing
 
 `watch` and the web interface do this automatically after every merge. To run it
@@ -309,11 +314,11 @@ anything else merges with a warning.
 
 ```bash
 python -m venv .venv && .venv/bin/pip install -e ".[dev]"
-.venv/bin/python -m pytest      # 85 tests
+.venv/bin/python -m pytest      # 101 tests
 .venv/bin/ruff check src tests
 ```
 
-The test suite builds `.jwlibrary` archives from the schema in
+The suite runs on Python 3.9 through 3.13. It builds `.jwlibrary` archives from the schema in
 `tests/fixtures/schema_v16.sql`, so it carries no personal study data. `*.jwlibrary`
 is in `.gitignore` for the same reason — do not commit your own backups.
 
