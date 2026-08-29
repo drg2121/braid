@@ -17,7 +17,7 @@ from pathlib import Path
 HERE = Path(__file__).parent
 
 # Module order matters: each may only import from ones already inlined.
-MODULES = ["jwlibrary.js", "merge.js", "verify.js", "store.js", "app.js"]
+MODULES = ["wal.js", "jwlibrary.js", "merge.js", "verify.js", "store.js", "app.js"]
 
 
 def strip_module_syntax(source: str, name: str) -> str:

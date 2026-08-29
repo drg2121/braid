@@ -54,10 +54,10 @@ for (const path of paths) {
 backups.sort((a, b) => (a.lastModified < b.lastModified ? 1 : -1));
 const [base, ...sources] = backups;
 
-const db = new SQL.Database(await base.database());
+const db = new SQL.Database(await base.databaseBytes());
 const mediaPlan = new Map();
 for (const entry of base.mediaEntries()) {
-  mediaPlan.set(entry.name, { backup: base, entry });
+  mediaPlan.set(base.memberName(entry), { backup: base, entry });
 }
 
 const report = await mergeInto(db, SQL.Database, base, sources, mediaPlan, {
@@ -66,7 +66,8 @@ const report = await mergeInto(db, SQL.Database, base, sources, mediaPlan, {
 
 const checkSources = [];
 for (const b of backups) {
-  checkSources.push({ label: b.file.name, db: new SQL.Database(await b.database()) });
+  const bytes = await b.databaseBytes();
+  checkSources.push({ label: b.file.name, db: new SQL.Database(bytes) });
 }
 const check = verify(db, checkSources, new Set(mediaPlan.keys()));
 for (const s of checkSources) s.db.close();

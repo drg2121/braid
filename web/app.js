@@ -364,10 +364,10 @@ async function doMerge() {
     );
     const [base, ...sources] = ordered;
 
-    const db = new engine.Database(await base.database());
+    const db = new engine.Database(await base.databaseBytes());
     const mediaPlan = new Map();
     for (const entry of base.mediaEntries()) {
-      mediaPlan.set(entry.name, { backup: base, entry });
+      mediaPlan.set(base.memberName(entry), { backup: base, entry });
     }
 
     const report = await mergeInto(db, engine.Database, base, sources, mediaPlan, {
@@ -384,7 +384,7 @@ async function doMerge() {
     for (const backup of ordered) {
       checkSources.push({
         label: backup.file.name,
-        db: new engine.Database(await backup.database()),
+        db: new engine.Database(await backup.databaseBytes()),
       });
     }
     const check = verify(db, checkSources, new Set(mediaPlan.keys()));

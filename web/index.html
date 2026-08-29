@@ -183,9 +183,11 @@
   <section>
     <h2>Add a backup</h2>
     <p class="empty" id="empty">Choose the <code>.jwlibrary</code> backup you made
-    on a device. You can add several at once.</p>
+    on a device. You can add several at once. A zipped copy of JW Library's own
+    <code>Userdata</code> folder works too, which is what lets a Shortcut fetch
+    a library with no tapping.</p>
     <ul id="files"></ul>
-    <input type="file" id="picker" multiple accept=".jwlibrary,application/zip">
+    <input type="file" id="picker" multiple accept=".jwlibrary,.zip,application/zip">
     <button class="secondary" id="choose">Choose backup files</button>
   </section>
 

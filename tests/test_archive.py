@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import sqlite3
 import zipfile
 from pathlib import Path
 
@@ -50,11 +51,27 @@ def test_open_rejects_a_non_zip(tmp_path: Path):
         Backup.open(bogus)
 
 
-def test_open_rejects_a_missing_manifest(tmp_path: Path):
+def test_open_rejects_an_archive_with_no_database(tmp_path: Path):
     path = tmp_path / "empty.jwlibrary"
     with zipfile.ZipFile(path, "w") as zf:
-        zf.writestr("userData.db", b"")
-    with pytest.raises(ArchiveError, match="manifest.json"):
+        zf.writestr("something-else.txt", b"")
+    with pytest.raises(ArchiveError, match="userData.db"):
+        Backup.open(path)
+
+
+def test_open_rejects_a_database_that_is_not_a_library(tmp_path: Path):
+    """A manifest is optional now, so this is what stands between a stray file
+    and a merge: the database has to actually be a study library."""
+    other = tmp_path / "other.db"
+    conn = sqlite3.connect(other)
+    conn.execute("CREATE TABLE unrelated (a)")
+    conn.commit()
+    conn.close()
+
+    path = tmp_path / "notalibrary.jwlibrary"
+    with zipfile.ZipFile(path, "w") as zf:
+        zf.write(other, "userData.db")
+    with pytest.raises(ArchiveError, match="not a JW Library one"):
         Backup.open(path)
 
 
@@ -144,3 +161,25 @@ def test_manifest_preserves_unknown_fields():
     out = manifest.to_dict()
     assert out["somethingNew"] == 42
     assert out["userDataBackup"]["futureField"] == "keep me"
+
+
+def test_sqlite_sidecars_are_never_treated_as_media(builder, tmp_path: Path):
+    """Reading a row recreates -shm beside the database, because the header
+    still says WAL. Anything in media_files ends up inside the merged archive,
+    so the sidecars must be excluded by name, not by what was extracted."""
+    b = builder("phone.jwlibrary", "Phone", "2026-05-01T00:00:00+0000")
+    b.media(b"a song", "song.mp3")
+    path = b.build()
+
+    with Backup.open(path) as backup:
+        conn = backup.connect(readonly=False)
+        conn.execute("PRAGMA journal_mode = WAL")
+        conn.execute("SELECT COUNT(*) FROM Location").fetchone()
+        conn.commit()
+        conn.close()
+
+        names = {p.name for p in backup.media_files()}
+
+    assert not any(n.endswith(("-wal", "-shm", "-journal")) for n in names), names
+    assert "userData.db" not in names
+    assert len(names) == 1

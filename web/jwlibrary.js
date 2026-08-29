@@ -6,6 +6,8 @@
 // copied from input to output as its already-compressed bytes, referenced
 // through Blob slices that the browser keeps on disk rather than in memory.
 
+import { applyWal } from "./wal.js";
+
 const EOCD_SIGNATURE = 0x06054b50;
 const CENTRAL_SIGNATURE = 0x02014b50;
 const LOCAL_SIGNATURE = 0x04034b50;
@@ -282,33 +284,104 @@ export async function jwHashOf(bytes) {
   return jwHex(new Uint8Array(digest));
 }
 
+/**
+ * The schema version SQLite keeps at offset 60 of a database header.
+ *
+ * Reading it straight from the bytes avoids needing a SQL engine just to
+ * label an archive that arrived without a manifest.
+ */
+export function schemaVersionOf(dbBytes) {
+  if (dbBytes.length < 64) return 0;
+  const view = new DataView(dbBytes.buffer, dbBytes.byteOffset, dbBytes.byteLength);
+  return view.getUint32(60, false);
+}
+
+function synthesiseManifest(dbBytes, file, dbName) {
+  const modified = new Date(file.lastModified || Date.now()).toISOString();
+  return {
+    name: file.name,
+    creationDate: modified,
+    version: 1,
+    type: 0,
+    userDataBackup: {
+      schemaVersion: schemaVersionOf(dbBytes),
+      databaseName: dbName,
+      // A folder copied out of the app carries no device name of its own.
+      deviceName: file.name.replace(/\.(jwlibrary|zip)$/i, ""),
+      lastModifiedDate: modified,
+      hash: "",
+    },
+  };
+}
+
 /** One opened backup: its manifest, its database bytes, and its media entries. */
 export class BackupFile {
-  constructor(file, entries, manifest, dbEntry) {
+  constructor(file, entries, manifest, dbEntry, database = null, prefix = "") {
     this.file = file;
     this.entries = entries;
     this.manifest = manifest;
     this.dbEntry = dbEntry;
+    // Set when a write-ahead log had to be folded in; the entry on its own is
+    // then not the whole database.
+    this.database = database;
+    // Non-empty when the archive is a zipped folder rather than a backup.
+    this.prefix = prefix;
+  }
+
+  /** The name a member should have in an archive we write out. */
+  memberName(entry) {
+    return entry.name.startsWith(this.prefix)
+      ? entry.name.slice(this.prefix.length)
+      : entry.name;
   }
 
   static async open(file) {
     const entries = await readDirectory(file);
-    const byName = new Map(entries.map((e) => [e.name, e]));
 
-    const manifestEntry = byName.get(MANIFEST_NAME);
-    if (!manifestEntry) {
-      throw new ArchiveError(`${file.name} has no ${MANIFEST_NAME}`);
-    }
-    const manifest = JSON.parse(
-      new TextDecoder().decode(await readEntry(file, manifestEntry))
-    );
-
-    const dbName = manifest?.userDataBackup?.databaseName || DB_NAME;
-    const dbEntry = byName.get(dbName);
+    // Zipping a folder nests everything one level down, so find the database
+    // first and read every other member relative to wherever it turned up.
+    const dbEntry =
+      entries.find((e) => e.name === DB_NAME) ||
+      entries.find((e) => e.name.split("/").pop() === DB_NAME);
     if (!dbEntry) {
-      throw new ArchiveError(`${file.name} has no ${dbName}`);
+      throw new ArchiveError(
+        `${file.name} does not contain ${DB_NAME}, so it is not a JW Library backup`
+      );
     }
-    return new BackupFile(file, entries, manifest, dbEntry);
+    const prefix = dbEntry.name.slice(0, dbEntry.name.length - DB_NAME.length);
+    const at = (name) => entries.find((e) => e.name === prefix + name) || null;
+    const dbName = DB_NAME;
+
+    // A backup exported by JW Library carries a manifest. A folder copied out
+    // of the app -- which is how a Shortcut can fetch a library without any
+    // tapping -- does not reliably have a current one, so one is made up from
+    // the database itself when it is missing.
+    const manifestEntry = at(MANIFEST_NAME);
+    let manifest = manifestEntry
+      ? JSON.parse(new TextDecoder().decode(await readEntry(file, manifestEntry)))
+      : null;
+
+    // The live database is kept in WAL mode, where the main file can hold
+    // almost nothing while the log holds everything. Fold the log in now, so
+    // nothing downstream has to know about it.
+    const walEntry = at(`${dbName}-wal`);
+    let database = null;
+    if (walEntry) {
+      database = applyWal(
+        await readEntry(file, dbEntry),
+        await readEntry(file, walEntry)
+      );
+    }
+
+    if (!manifest) {
+      manifest = synthesiseManifest(
+        database || (await readEntry(file, dbEntry)),
+        file,
+        dbName
+      );
+    }
+
+    return new BackupFile(file, entries, manifest, dbEntry, database, prefix);
   }
 
   get deviceName() {
@@ -327,18 +400,24 @@ export class BackupFile {
     );
   }
 
-  async database() {
-    return readEntry(this.file, this.dbEntry);
+  async databaseBytes() {
+    return this.database || readEntry(this.file, this.dbEntry);
   }
 
-  /** Every member except the database and the manifest. */
+  /** Every member that is actually media, not database machinery. */
   mediaEntries() {
-    const skip = new Set([this.dbEntry.name, MANIFEST_NAME]);
-    return this.entries.filter((e) => !skip.has(e.name) && !e.name.endsWith("/"));
+    const skip = new Set([DB_NAME, `${DB_NAME}-wal`, `${DB_NAME}-shm`, MANIFEST_NAME]);
+    return this.entries.filter(
+      (e) => !e.name.endsWith("/") && !skip.has(this.memberName(e))
+    );
   }
 
   entry(name) {
-    return this.entries.find((e) => e.name === name) || null;
+    return (
+      this.entries.find((e) => e.name === this.prefix + name) ||
+      this.entries.find((e) => e.name === name) ||
+      null
+    );
   }
 }
 

@@ -262,7 +262,7 @@ export async function mergeInto(db, Database, base, sources, mediaPlan, options 
   let done = 0;
   for (const source of sources) {
     onProgress(`Merging ${source.file.name}`, done / sources.length);
-    const sourceDb = new Database(await source.database());
+    const sourceDb = new Database(await source.databaseBytes());
     const sr = new SourceReport(
       source.file.name,
       source.deviceName,

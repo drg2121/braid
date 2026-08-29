@@ -21,7 +21,7 @@ import zipfile
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from datetime import datetime
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 DB_NAME = "userData.db"
 MANIFEST_NAME = "manifest.json"
@@ -124,14 +124,27 @@ class Backup:
         target.mkdir(parents=True, exist_ok=True)
 
         with zipfile.ZipFile(path) as zf:
-            names = set(zf.namelist())
-            if MANIFEST_NAME not in names:
-                raise ArchiveError(f"{path} has no {MANIFEST_NAME}")
-            manifest = Manifest.parse(json.loads(zf.read(MANIFEST_NAME)))
-            if manifest.database_name not in names:
-                raise ArchiveError(
-                    f"{path} has no {manifest.database_name} named by its manifest"
-                )
+            names = [m.filename for m in zf.infolist() if not m.is_dir()]
+
+            # A backup exported by JW Library holds userData.db at the top.
+            # A zipped copy of the app's own Userdata folder -- which is how a
+            # Shortcut can fetch a library with no tapping -- nests it one level
+            # down and may carry a stale manifest or none at all.
+            db_member = next(
+                (n for n in names if n == DB_NAME),
+                next((n for n in names if PurePosixPath(n).name == DB_NAME), None),
+            )
+            if db_member is None:
+                raise ArchiveError(f"{path} contains no {DB_NAME}")
+            prefix = db_member[: -len(DB_NAME)]
+
+            manifest_member = prefix + MANIFEST_NAME
+            manifest = (
+                Manifest.parse(json.loads(zf.read(manifest_member)))
+                if manifest_member in names
+                else None
+            )
+
             for member in zf.infolist():
                 if member.is_dir():
                     continue
@@ -140,6 +153,20 @@ class Backup:
                 if name.startswith("/") or ".." in Path(name).parts:
                     raise ArchiveError(f"{path} contains an unsafe member path: {name}")
                 zf.extract(member, target)
+
+        # Flatten a nested folder so everything downstream sees a plain backup.
+        if prefix:
+            nested = target / prefix.rstrip("/")
+            for entry in list(nested.iterdir()):
+                entry.rename(target / entry.name)
+            nested.rmdir()
+
+        db_path = target / DB_NAME
+        _fold_in_write_ahead_log(db_path)
+
+        if manifest is None:
+            manifest = _manifest_for(db_path, path)
+        manifest.database_name = DB_NAME
 
         backup = cls(path, target, manifest)
         backup._own_workdir = own
@@ -168,15 +195,96 @@ class Backup:
         return conn
 
     def media_files(self) -> Iterator[Path]:
-        """Every extracted member except the database and the manifest."""
-        skip = {self.manifest.database_name, MANIFEST_NAME}
+        """Every extracted member that is media, not database machinery.
+
+        The sidecars have to be excluded by name rather than by what was
+        extracted: the database header still says WAL, so merely opening it to
+        read a row recreates ``-shm`` beside it, and anything left in this list
+        gets written into the merged archive.
+        """
+        db = self.manifest.database_name
+        skip = {db, MANIFEST_NAME, f"{db}-wal", f"{db}-shm", f"{db}-journal"}
         for entry in sorted(self.workdir.rglob("*")):
-            if entry.is_file() and entry.relative_to(self.workdir).as_posix() not in skip:
+            name = entry.relative_to(self.workdir).as_posix()
+            if entry.is_file() and name not in skip:
                 yield entry
 
     def sort_key(self) -> str:
         """Timestamp used to order backups oldest-first when merging."""
         return self.manifest.last_modified_date or self.manifest.creation_date
+
+
+def _fold_in_write_ahead_log(db_path: Path) -> None:
+    """Checkpoint a ``-wal`` sitting beside the database, then remove it.
+
+    JW Library runs in WAL mode, where the main file can be a near-empty shell
+    while the log holds everything. SQLite folds the log in as soon as it opens
+    the pair, so a checkpoint and a close is all it takes -- but it has to
+    happen, or the library would look empty.
+    """
+    wal = db_path.with_name(db_path.name + "-wal")
+    if not wal.is_file() or wal.stat().st_size == 0:
+        for suffix in ("-wal", "-shm"):
+            sidecar = db_path.with_name(db_path.name + suffix)
+            if sidecar.exists():
+                sidecar.unlink()
+        return
+
+    conn = sqlite3.connect(db_path)
+    try:
+        conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+        conn.commit()
+    finally:
+        conn.close()
+    for suffix in ("-wal", "-shm"):
+        sidecar = db_path.with_name(db_path.name + suffix)
+        if sidecar.exists():
+            sidecar.unlink()
+
+
+def _manifest_for(db_path: Path, source: Path) -> Manifest:
+    """Describe a library that arrived without a manifest of its own.
+
+    Also the point at which a file that is not a JW Library database gets
+    refused, with a sentence someone can act on rather than a SQLite error.
+    """
+    conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+    try:
+        tables = {
+            r[0]
+            for r in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")
+        }
+        if "LastModified" not in tables or "Location" not in tables:
+            raise ArchiveError(
+                f"{source.name} contains a database, but not a JW Library one "
+                "-- it has none of the tables a personal study library has"
+            )
+
+        schema_version = conn.execute("PRAGMA user_version").fetchone()[0]
+        if not schema_version and "grdb_migrations" in tables:
+            rows = [r[0] for r in conn.execute("SELECT identifier FROM grdb_migrations")]
+            numbers = [int(r[1:]) for r in rows if r[1:].isdigit()]
+            schema_version = max(numbers) if numbers else 0
+        row = conn.execute("SELECT LastModified FROM LastModified").fetchone()
+        last_modified = row[0] if row else ""
+    except sqlite3.DatabaseError as exc:
+        raise ArchiveError(
+            f"{source.name} does not hold a readable database: {exc}"
+        ) from exc
+    finally:
+        conn.close()
+
+    return Manifest(
+        name=source.name,
+        creation_date=_iso_local(),
+        version=1,
+        type=0,
+        schema_version=schema_version,
+        database_name=DB_NAME,
+        device_name=source.stem,
+        last_modified_date=last_modified,
+        hash="",
+    )
 
 
 def db_last_modified(db_path: Path) -> str:

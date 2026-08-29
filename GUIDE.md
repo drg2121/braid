@@ -61,6 +61,40 @@ the device you actually used:
 You can add as many devices as you like: a phone, a tablet, a second tablet, a
 computer. Each one just needs to have contributed a backup once.
 
+### Skipping the export tap, with a Shortcut
+
+Making a backup by hand is the only part of this that still needs the app. It
+can be skipped, because JW Library lets the Files app see its own library.
+
+Look in **Files ▸ On My iPhone ▸ JW Library**. There is a folder called
+**Userdata** — that is the live library. A Shortcut can copy it out on a
+schedule, so a fresh copy lands in your shared folder every night without you
+touching anything:
+
+1. Open **Shortcuts** and create a new shortcut.
+2. **Get Contents of Folder** — pick `On My iPhone ▸ JW Library ▸ Userdata`.
+3. **Make Archive** — this produces one `.zip`.
+4. **Save File** — into your shared folder, with *Overwrite If File Exists* on.
+   Give it a name that says which device it is, like `iPhone Userdata.zip`.
+5. In the **Automation** tab, run that shortcut daily at a time your device is
+   usually idle.
+
+Then add that `.zip` here like any other backup — the page reads it and shows
+which device it came from.
+
+> **Copy the whole folder, not just `userData.db`.** On a real device that file
+> can be a nearly empty shell, with everything living in the `userData.db-wal`
+> beside it. A copy of the database on its own looks like a library with nothing
+> in it, and restoring that would wipe the real one. Archiving the whole folder
+> takes everything, and this page puts it back together correctly.
+
+It is safe to run while JW Library is open. If a copy is taken mid-write, the
+page uses the last completed save and ignores the unfinished part.
+
+**Restoring still needs you.** Nothing can put a library back onto a phone
+without going through the app, and that is the right place for the line to be —
+restoring replaces everything, and it should be deliberate.
+
 ### More than one person
 
 If a tablet is shared, or you help someone else with theirs, tap **Manage** at
