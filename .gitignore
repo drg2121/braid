@@ -1,0 +1,27 @@
+# JW Library backups and playlists contain personal study data — never commit them.
+*.jwlibrary
+*.jwlplaylist
+*.jwpub
+userData.db
+manifest.json
+
+# jwsync working files
+.jwsync-state.json
+out/
+build/
+dist/
+*.egg-info/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# OS
+.DS_Store
