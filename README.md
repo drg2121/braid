@@ -82,7 +82,68 @@ source  : UserdataBackup_2026-08-29_iPad.jwlibrary  [iPad]  modified 2026-08-04T
   media   added=0  reused=13  renamed=0
 ```
 
-### Sync a shared folder
+### Keep it merging by itself
+
+This is the flow to actually use day to day. `watch` sits on a folder your
+devices already sync and rebuilds one merged file, under one unchanging name,
+whenever any device drops a new backup in:
+
+```bash
+jwsync watch ~/Library/Mobile\ Documents/com~apple~CloudDocs/JW\ backups
+```
+
+```
+[19:58:04] watching /Users/you/…/JW backups every 30s (Ctrl-C to stop)
+[19:58:11] change detected, letting it settle
+[19:58:19] merged 2 backups, 71 new rows, verified -> JW Library MERGED.jwlibrary
+```
+
+The output is always called **`JW Library MERGED.jwlibrary`**, so the file you
+restore on each device never changes name — the cloud provider simply updates it
+in place. Dated copies of every merge are kept in `_jwsync_history/`, and what
+has already been merged is remembered there too, so restarting the watcher (or
+running `--once` from cron) never redoes finished work.
+
+Then make it start at login:
+
+```bash
+jwsync install-agent ~/Library/Mobile\ Documents/com~apple~CloudDocs/JW\ backups
+```
+
+That writes a launchd agent on macOS, a systemd user unit on Linux, or prints
+the Task Scheduler command on Windows. It does **not** start it — the command
+prints the one line that does, so nothing begins running at login without you
+asking.
+
+#### What this can and cannot automate
+
+JW Library has no API, no URL scheme and no Shortcuts actions. Exporting a
+backup and restoring one will always be taps inside the app. Everything between
+them is automatic:
+
+| Step | Who does it |
+| --- | --- |
+| Export a backup on a device | You — Personal Study ▸ ⤒ ▸ Create Backup ▸ save into the shared folder |
+| Notice the new backup | `jwsync watch` |
+| Merge it with every other device | `jwsync watch` |
+| Check nothing was lost | `jwsync watch` (runs `verify` on every merge) |
+| Push the result back to the devices | Your cloud provider |
+| Restore on a device | You — Personal Study ▸ ⤒ ▸ Restore Backup ▸ `JW Library MERGED.jwlibrary` |
+
+So a round of syncing costs a handful of taps per device and no work at the
+computer. Export where you made changes, restore where you want them.
+
+Two things worth setting up once:
+
+- Export **straight into the shared folder** from the share sheet (Files ▸ iCloud
+  Drive ▸ your folder). That removes the transfer step entirely.
+- If a device's backup shows as a `.icloud` placeholder, the watcher says so and
+  waits rather than merging a half-downloaded file. Marking the folder *Keep
+  Downloaded* avoids it.
+
+### Merge a folder once
+
+
 
 The workflow that actually keeps three devices in step: point every device's
 backup export at one folder that iCloud Drive, Google Drive or Dropbox already
@@ -92,16 +153,10 @@ syncs, then run:
 jwsync sync ~/Library/Mobile\ Documents/com~apple~CloudDocs/JW\ backups
 ```
 
-`sync` merges every `.jwlibrary` in the folder, skips its own previous output,
-writes a timestamped merged file, and records what it did in
-`.jwsync-state.json`. Run it again after nothing has changed and it tells you so
-instead of writing another copy.
-
-The routine, once per round of changes:
-
-1. On each device: **Personal Study ▸ ⤒ ▸ Create Backup**, save into the shared folder.
-2. On the laptop: `jwsync sync <folder>`.
-3. On each device: **Personal Study ▸ ⤒ ▸ Restore Backup**, pick the merged file.
+`sync` is the one-shot version of `watch`: it merges every `.jwlibrary` in the
+folder, skips its own previous output, writes a timestamped merged file, and
+records what it did in `.jwsync-state.json`. Run it again after nothing has
+changed and it tells you so instead of writing another copy.
 
 ### Local web interface
 
@@ -112,6 +167,30 @@ jwsync serve
 Opens `http://127.0.0.1:8765` — point it at a folder, tick the backups you want,
 merge. It binds to localhost only and works on folder paths rather than uploads,
 because real libraries run to hundreds of megabytes.
+
+### Check that a merge lost nothing
+
+`watch` and the web interface do this automatically after every merge. To run it
+yourself:
+
+```bash
+jwsync verify merged.jwlibrary phone.jwlibrary tablet.jwlibrary
+```
+
+It walks every note, highlight, bookmark, tag, study answer, media file and
+playlist item in each source and asserts it is findable in the merged file, then
+exits non-zero if anything is not.
+
+```
+items checked and found in the merged file
+  Bookmark                                2
+  IndependentMedia                       81
+  Note                                   33
+  PlaylistItem                           78
+  UserMark                             4924
+  ...
+PASS -- every item from every source is present
+```
 
 ## How the merge decides things
 
@@ -146,6 +225,10 @@ report says so and the command exits non-zero.
 | `--json` | Emit the report as JSON |
 | `--report FILE` | Also write the JSON report to a file |
 | `--force` | Overwrite the output / re-merge even if nothing changed |
+| `--interval N` | Seconds between polls in `watch` (default 30) |
+| `--once` | Check once and exit, for cron or Task Scheduler |
+| `--fresh` | Rebuild from the device backups alone, ignoring the previous merge |
+| `--no-history` | Do not keep dated copies of merges |
 | `--no-integrity-check` | Skip the foreign-key verification pass |
 
 ## The file format
@@ -172,7 +255,11 @@ anything else merges with a warning.
 
 ## Limitations
 
-- Additive only, so deletions do not propagate (see the first section).
+- Additive only, so deletions do not propagate (see the first section). Use
+  `--fresh` to rebuild from the device backups alone when you want dropped data
+  to stay dropped.
+- Export and restore cannot be automated; JW Library exposes no interface for
+  them. `watch` automates everything in between.
 - Bookmarks are capped at 10 slots per publication by the schema; extras are
   reported rather than merged.
 - Study answers carry no timestamp, so their conflicts are resolved by policy,
@@ -185,7 +272,7 @@ anything else merges with a warning.
 
 ```bash
 python -m venv .venv && .venv/bin/pip install -e ".[dev]"
-.venv/bin/python -m pytest      # 48 tests
+.venv/bin/python -m pytest      # 73 tests
 .venv/bin/ruff check src tests
 ```
 

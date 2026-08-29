@@ -691,8 +691,8 @@ class Merger:
 
     # -- PlaylistItem -------------------------------------------------------
 
+    @staticmethod
     def _playlist_item_key(
-        self,
         conn: sqlite3.Connection,
         row: sqlite3.Row,
         owning_tag: tuple | None,

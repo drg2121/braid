@@ -19,6 +19,7 @@ from urllib.parse import parse_qs, urlparse
 
 from .archive import Backup, unique_path, write_backup
 from .merge import MergeOptions, merge_backups
+from .verify import verify
 
 PAGE = """<!doctype html>
 <html lang="en">
@@ -191,8 +192,11 @@ async function merge() {
     if (!res.ok) throw new Error(data.error || "merge failed");
     $("reportBox").hidden = false;
     $("report").textContent = data.text;
-    $("status").textContent = "Merged into " + data.output;
-    $("status").className = "status " + (data.integrityErrors.length ? "warn" : "ok");
+    const bad = data.integrityErrors.length || !data.verified;
+    $("status").textContent = data.verified
+      ? "Merged and verified — every item from every backup is in " + data.output
+      : "Merged into " + data.output + ", but the check found problems. Read the report.";
+    $("status").className = "status " + (bad ? "warn" : "ok");
   } catch (err) {
     $("status").textContent = err.message;
     $("status").className = "status err";
@@ -264,10 +268,14 @@ def _merge(payload: dict) -> dict:
             write_backup(output, db_path, media.members, manifest)
             report.output = str(output)
 
+        # Check the result independently before telling anyone it is safe.
+        check = verify(output, paths)
+
         return {
             "output": str(output),
-            "text": report.to_text(),
+            "text": report.to_text() + "\n\n" + check.to_text(),
             "integrityErrors": report.integrity_errors,
+            "verified": check.ok,
         }
     finally:
         for backup in stack:

@@ -20,6 +20,8 @@ from .archive import (
 )
 from .merge import COUNTED_TABLES, MergeError, MergeOptions, merge_backups
 from .report import MergeReport
+from .verify import verify
+from .watch import STABLE_OUTPUT_NAME, watch
 
 STATE_FILENAME = ".jwsync-state.json"
 
@@ -235,6 +237,52 @@ def cmd_sync(args: argparse.Namespace) -> int:
     return 1 if report.integrity_errors else 0
 
 
+def cmd_verify(args: argparse.Namespace) -> int:
+    result = verify(args.merged, args.sources)
+    print(json.dumps(result.to_dict(), indent=2) if args.json else result.to_text())
+    return 0 if result.ok else 1
+
+
+def cmd_install_agent(args: argparse.Namespace) -> int:
+    from .agent import install
+
+    folder = Path(args.folder).expanduser()
+    if not folder.is_dir():
+        print(f"{folder} is not a directory", file=sys.stderr)
+        return 2
+
+    info = install(folder, args.interval)
+    print(f"Service definition for {info['system']}")
+    if info["path"]:
+        print(f"  written to  {info['path']}")
+    print()
+    print("It is not running yet. Start it with:")
+    print(f"  {info['activate']}")
+    print()
+    print("To stop it later:")
+    print(f"  {info['deactivate']}")
+    print(f"Logs: {info['logs']}")
+    return 0
+
+
+def cmd_watch(args: argparse.Namespace) -> int:
+    folder = Path(args.folder).expanduser()
+    if not folder.is_dir():
+        print(f"{folder} is not a directory", file=sys.stderr)
+        return 2
+    options = MergeOptions(
+        input_fields=args.input_fields, check_integrity=not args.no_integrity_check
+    )
+    return watch(
+        folder,
+        interval=args.interval,
+        options=options,
+        accumulate=not args.fresh,
+        keep_history=not args.no_history,
+        once=args.once,
+    )
+
+
 def cmd_serve(args: argparse.Namespace) -> int:
     from .webui import serve
 
@@ -313,6 +361,57 @@ def build_parser() -> argparse.ArgumentParser:
     )
     add_merge_options(p_sync)
     p_sync.set_defaults(func=cmd_sync)
+
+    p_verify = sub.add_parser(
+        "verify",
+        help=(
+            "check that a merged backup still contains every note, highlight, "
+            "bookmark, tag, study answer, media file and playlist item from the "
+            "backups it was built from"
+        ),
+    )
+    p_verify.add_argument("merged", type=Path)
+    p_verify.add_argument(
+        "sources", nargs="+", type=Path, help="the backups that went into the merge"
+    )
+    p_verify.add_argument("--json", action="store_true")
+    p_verify.set_defaults(func=cmd_verify)
+
+    p_watch = sub.add_parser(
+        "watch",
+        help=(
+            "keep merging automatically: watch a shared folder and rebuild "
+            f"{STABLE_OUTPUT_NAME!r} whenever any device drops a new backup in"
+        ),
+    )
+    p_watch.add_argument("folder", type=Path)
+    p_watch.add_argument(
+        "--interval", type=float, default=30.0, help="seconds between polls"
+    )
+    p_watch.add_argument(
+        "--once", action="store_true", help="check once and exit, for scheduled runs"
+    )
+    p_watch.add_argument(
+        "--fresh",
+        action="store_true",
+        help=(
+            "rebuild from the device backups alone instead of folding in the "
+            "previous merged result"
+        ),
+    )
+    p_watch.add_argument(
+        "--no-history", action="store_true", help="do not keep dated copies of merges"
+    )
+    add_merge_options(p_watch)
+    p_watch.set_defaults(func=cmd_watch)
+
+    p_agent = sub.add_parser(
+        "install-agent",
+        help="write a launchd/systemd/Task Scheduler definition so watch runs at login",
+    )
+    p_agent.add_argument("folder", type=Path)
+    p_agent.add_argument("--interval", type=int, default=30)
+    p_agent.set_defaults(func=cmd_install_agent)
 
     p_serve = sub.add_parser("serve", help="open the local drag-and-drop web interface")
     p_serve.add_argument("--host", default="127.0.0.1")
