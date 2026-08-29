@@ -1,5 +1,6 @@
 # JW Library backups and playlists contain personal study data — never commit them.
 *.jwlibrary
+web/bundle-test.html
 *.jwlplaylist
 *.jwpub
 userData.db

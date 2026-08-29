@@ -22,7 +22,39 @@ Nothing you have is deleted. Nothing leaves your computer.
 right. jwsync never changes them — it only writes new files — so they are your
 way back if anything looks wrong.
 
-## Setting it up once
+## Two ways to do this
+
+**If you have an iPad or iPhone and no computer** — or you simply do not want to
+install anything — use the web page. It runs entirely inside your browser, on
+your own device. Your backups are never uploaded anywhere. Skip to
+[Using the web page](#using-the-web-page).
+
+**If you have a Mac or a PC**, the app version can also read and write JW
+Library on that computer directly, which removes two of the steps there. Carry
+on reading below.
+
+## Using the web page
+
+1. Open the page (your congregation's link, or the `jwsync.html` file if someone
+   sent you one).
+2. On each device: JW Library ▸ **Personal Study** ▸ the **⤒** icon ▸
+   **Create Backup**, and save it to Files.
+3. On the page, tap **Choose backup files** and pick the backups you made.
+4. Tap **Combine backups**. It tells you when it is done and confirms that every
+   note, highlight, bookmark, tag and playlist was found in the result.
+5. Tap **Save the combined file** and save it to Files.
+6. On each device: **Personal Study ▸ ⤒ ▸ Restore Backup**, and pick that file.
+
+That is the whole routine, and it works on an iPad, an iPhone, a Mac or a PC.
+Everything happens on your device: with the page open, you can turn the internet
+off entirely and it still works.
+
+> **Restoring replaces** what is on that device. That is the point — the combined
+> file has everything from every device — but it is why you restore the
+> *combined* file and never one device's own backup. Keep your original backups
+> until you have checked that everything is there.
+
+## Setting up the computer app
 
 ### 1. Make a folder your devices share
 

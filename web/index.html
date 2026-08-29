@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>jwsync</title>
+<style>
+  :root {
+    --bg: #f4f4f7;
+    --panel: #ffffff;
+    --ink: #16161a;
+    --muted: #5d5e68;
+    --line: #e0e0e7;
+    --accent: #5a2d8c;
+    --accent-ink: #ffffff;
+    --ok-bg: #e7f5ec;
+    --ok-ink: #14663a;
+    --warn-bg: #fdf1de;
+    --warn-ink: #8a4f00;
+    --err-bg: #fdecea;
+    --err-ink: #a4201a;
+    --radius: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #131317;
+      --panel: #1d1d23;
+      --ink: #ececf2;
+      --muted: #9fa0ac;
+      --line: #32323d;
+      --accent: #bb9ae0;
+      --accent-ink: #131317;
+      --ok-bg: #16301f; --ok-ink: #8fdcaf;
+      --warn-bg: #33260f; --warn-ink: #e6b16a;
+      --err-bg: #351d1b; --err-ink: #f3968e;
+    }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0;
+    padding: 1.25rem 1rem calc(2rem + env(safe-area-inset-bottom));
+    background: var(--bg);
+    color: var(--ink);
+    font: 17px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  main { max-width: 44rem; margin: 0 auto; }
+  header { margin-bottom: 1.25rem; }
+  h1 { font-size: 1.6rem; margin: 0 0 .3rem; letter-spacing: -0.01em; }
+  .lede { color: var(--muted); margin: 0; font-size: .97rem; }
+
+  section {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 1.1rem;
+    margin-bottom: .9rem;
+  }
+  h2 {
+    font-size: .78rem; text-transform: uppercase; letter-spacing: .07em;
+    color: var(--muted); margin: 0 0 .8rem; font-weight: 700;
+  }
+
+  button {
+    font: inherit; font-weight: 600; border: 0; border-radius: 11px;
+    padding: .85rem 1.2rem; background: var(--accent); color: var(--accent-ink);
+    cursor: pointer; width: 100%; min-height: 48px;
+  }
+  button.secondary {
+    background: transparent; color: var(--accent);
+    border: 1.5px solid var(--line);
+  }
+  button:disabled { opacity: .45; cursor: default; }
+  button + button { margin-top: .6rem; }
+
+  ul { list-style: none; padding: 0; margin: 0; }
+  li.file {
+    display: flex; gap: .75rem; align-items: flex-start;
+    padding: .8rem 0; border-top: 1px solid var(--line);
+  }
+  li.file:first-child { border-top: 0; padding-top: 0; }
+  .file .name { font-weight: 600; word-break: break-word; }
+  .file .meta { color: var(--muted); font-size: .86rem; margin-top: .15rem; }
+  .file .drop {
+    background: none; border: 0; color: var(--muted); font-size: 1.5rem;
+    line-height: 1; padding: 0 .3rem; width: auto; min-height: 0; cursor: pointer;
+  }
+  .grow { flex: 1; min-width: 0; }
+
+  .empty { color: var(--muted); font-size: .93rem; margin: 0 0 .9rem; }
+
+  .banner {
+    border-radius: 11px; padding: .85rem 1rem; margin-bottom: .9rem;
+    font-size: .93rem;
+  }
+  .banner.ok { background: var(--ok-bg); color: var(--ok-ink); }
+  .banner.warn { background: var(--warn-bg); color: var(--warn-ink); }
+  .banner.err { background: var(--err-bg); color: var(--err-ink); }
+  .banner strong { display: block; margin-bottom: .2rem; }
+
+  .field { margin-bottom: .9rem; }
+  label { display: block; font-weight: 600; font-size: .93rem; margin-bottom: .35rem; }
+  select {
+    font: inherit; width: 100%; padding: .7rem .8rem; border-radius: 11px;
+    border: 1.5px solid var(--line); background: var(--bg); color: var(--ink);
+    min-height: 48px;
+  }
+
+  progress { width: 100%; height: 8px; margin-top: .7rem; }
+
+  details { margin-top: .9rem; }
+  summary {
+    cursor: pointer; font-weight: 600; font-size: .93rem; color: var(--accent);
+    padding: .4rem 0;
+  }
+  pre {
+    background: var(--bg); border: 1px solid var(--line); border-radius: 10px;
+    padding: .8rem; overflow-x: auto; font-size: .8rem; margin: .5rem 0 0;
+    -webkit-overflow-scrolling: touch;
+  }
+  ol.steps { padding-left: 1.3rem; margin: 0; }
+  ol.steps li { margin-bottom: .55rem; }
+  ol.steps li:last-child { margin-bottom: 0; }
+  code {
+    background: var(--bg); border-radius: 5px; padding: .1rem .3rem;
+    font-size: .87em;
+  }
+  .hint { color: var(--muted); font-size: .87rem; margin: .6rem 0 0; }
+  input[type=file] { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>jwsync</h1>
+    <p class="lede">Combine your JW Library backups from several devices into one
+    file that has everything from all of them.</p>
+  </header>
+
+  <div class="banner ok">
+    <strong>Nothing is uploaded.</strong>
+    Your backups are opened inside this page, on this device. They are never sent
+    anywhere, and this page works with the internet switched off.
+  </div>
+
+  <section>
+    <h2>1 · Your backups</h2>
+    <p class="empty" id="empty">Choose the <code>.jwlibrary</code> backup you made
+    on each device. You need at least two.</p>
+    <ul id="files"></ul>
+    <input type="file" id="picker" multiple accept=".jwlibrary,application/zip">
+    <button class="secondary" id="choose">Choose backup files</button>
+  </section>
+
+  <section>
+    <h2>2 · Combine them</h2>
+    <div class="field">
+      <label for="inputFields">If a study answer differs between devices</label>
+      <select id="inputFields">
+        <option value="keep">Keep the newest backup's answer</option>
+        <option value="overwrite">Take the other device's answer</option>
+      </select>
+    </div>
+    <button id="merge" disabled>Combine backups</button>
+    <progress id="progress" hidden></progress>
+    <p class="hint" id="progressText" hidden></p>
+  </section>
+
+  <section id="result" hidden>
+    <h2>3 · Result</h2>
+    <div id="resultBanner"></div>
+    <button id="save">Save the combined file</button>
+    <p class="hint">Save it into the same folder your devices share, then on each
+    device open JW Library and go to Personal Study, tap the ⤒ icon, and choose
+    Restore Backup.</p>
+    <details>
+      <summary>What changed</summary>
+      <pre id="report"></pre>
+    </details>
+  </section>
+
+  <section>
+    <h2>How to use this</h2>
+    <ol class="steps">
+      <li>On each device: JW Library ▸ <strong>Personal Study</strong> ▸ the
+      <strong>⤒</strong> icon ▸ <strong>Create Backup</strong>. Save it to Files.</li>
+      <li>Come back here and choose those backup files above.</li>
+      <li>Tap <strong>Combine backups</strong>, then save the result.</li>
+      <li>On each device: <strong>Personal Study ▸ ⤒ ▸ Restore Backup</strong>,
+      and pick the combined file.</li>
+    </ol>
+    <p class="hint"><strong>Restoring replaces</strong> what is on that device.
+    That is the point — the combined file has everything — but it is why you
+    restore the combined file and never one device's own backup. Keep your
+    original backups until you have checked that everything is there.</p>
+  </section>
+</main>
+<!-- sql.js ships as a classic script that defines window.initSqlJs. -->
+<script src="./vendor/sql-wasm.js"></script>
+<script type="module" src="./app.js"></script>
+</body>
+</html>

@@ -32,6 +32,34 @@ laptop.jwlibrary ─┘
 - This is an independent project. It is not affiliated with, endorsed by, or
   supported by the publishers of JW Library.
 
+## In the browser, with no computer at all
+
+Most people have a phone and a tablet and nothing else, so the merge also exists
+as a web page that does the whole thing client-side: `web/` is a static site that
+opens the backups, merges them and writes the result without a byte leaving the
+device. It works on an iPad, an iPhone, a Mac or a PC, offline once loaded.
+
+```bash
+python3 -m http.server --directory web    # try it locally
+python3 web/build.py                       # one self-contained file in dist/
+```
+
+`web/build.py` inlines every module and the SQLite WebAssembly build into a
+single ~1 MB HTML file that can be emailed or AirDropped and opened straight from
+Files.
+
+Two things make it fast enough for a 210 MB backup on a phone. Media is copied
+between archives as its already-compressed bytes, referenced through `Blob`
+slices the browser keeps on disk, so nothing but the database is ever decompressed
+or held in memory; and the checksum and sizes come from the source archive's own
+directory, because the bytes are identical. Merging a 210 MB and a 51 MB backup
+takes about half a second.
+
+The merge is implemented twice -- `src/jwsync/merge.py` and `web/merge.js` --
+which is a drift risk, so `tests/test_browser_parity.py` runs both engines over
+the same libraries and fails if their row counts, tags or verification results
+differ.
+
 ## Install
 
 **If you are not a developer**, read [GUIDE.md](GUIDE.md) instead — it covers
@@ -314,11 +342,12 @@ anything else merges with a warning.
 
 ```bash
 python -m venv .venv && .venv/bin/pip install -e ".[dev]"
-.venv/bin/python -m pytest      # 101 tests
+.venv/bin/python -m pytest      # 106 tests
 .venv/bin/ruff check src tests
 ```
 
-The suite runs on Python 3.9 through 3.13. It builds `.jwlibrary` archives from the schema in
+The suite runs on Python 3.9 through 3.13. The browser-parity tests need Node
+and skip themselves without it. It builds `.jwlibrary` archives from the schema in
 `tests/fixtures/schema_v16.sql`, so it carries no personal study data. `*.jwlibrary`
 is in `.gitignore` for the same reason — do not commit your own backups.
 
