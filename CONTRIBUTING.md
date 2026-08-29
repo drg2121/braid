@@ -4,7 +4,7 @@
 
 `.jwlibrary` files contain personal study data — notes, highlights, bookmarks.
 They are in `.gitignore`. If you need a sample for a bug report, use
-`jwsync inspect --json`, which reports counts and no content, or build a
+`braid inspect --json`, which reports counts and no content, or build a
 synthetic archive with the `BackupBuilder` in `tests/conftest.py`.
 
 ## Setup
@@ -18,7 +18,7 @@ python -m venv .venv
 
 ## Adding support for a new schema version
 
-1. Add the version to `SUPPORTED_SCHEMA_VERSIONS` in `src/jwsync/archive.py`.
+1. Add the version to `SUPPORTED_SCHEMA_VERSIONS` in `src/braid/archive.py`.
 2. Diff the new schema against `tests/fixtures/schema_v16.sql`.
 3. For each new or changed table, decide its identity key and add it to the
    merge order in `Merger._merge_db`. Parents before children.

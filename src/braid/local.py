@@ -36,7 +36,7 @@ DB_NAME = "userData.db"
 SIDECARS = ("-wal", "-shm")
 
 #: Where a copy of the live database is put before anything is written to it.
-SAFETY_DIRNAME = "jwsync-safety-copies"
+SAFETY_DIRNAME = "braid-safety-copies"
 
 
 class LocalLibraryError(RuntimeError):
@@ -135,7 +135,7 @@ class LocalLibrary:
         if not self.exists():
             raise LocalLibraryError(f"no {DB_NAME} in {self.path}")
 
-        with tempfile.TemporaryDirectory(prefix="jwsync-export-") as tmp:
+        with tempfile.TemporaryDirectory(prefix="braid-export-") as tmp:
             snapshot = Path(tmp) / DB_NAME
             conn = sqlite3.connect(f"file:{self.db_path}?mode=ro", uri=True)
             try:
@@ -202,7 +202,7 @@ class LocalLibrary:
 
         with Backup.open(Path(backup_path)) as backup:
             # Flatten the incoming database so no stale WAL is left behind.
-            with tempfile.TemporaryDirectory(prefix="jwsync-install-") as tmp:
+            with tempfile.TemporaryDirectory(prefix="braid-install-") as tmp:
                 staged = Path(tmp) / DB_NAME
                 conn = sqlite3.connect(f"file:{backup.db_path}?mode=ro", uri=True)
                 try:

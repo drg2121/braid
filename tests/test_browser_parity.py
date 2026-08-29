@@ -18,9 +18,9 @@ from pathlib import Path
 
 import pytest
 
-from jwsync.archive import Backup, write_backup
-from jwsync.merge import merge_backups
-from jwsync.verify import verify
+from braid.archive import Backup, write_backup
+from braid.merge import merge_backups
+from braid.verify import verify
 
 WEB = Path(__file__).resolve().parents[1] / "web"
 NODE = shutil.which("node")
@@ -61,7 +61,7 @@ for (const entry of base.mediaEntries()) {
 }
 
 const report = await mergeInto(db, SQL.Database, base, sources, mediaPlan, {
-  inputFields: process.env.JWSYNC_INPUT_FIELDS || "keep",
+  inputFields: process.env.BRAID_INPUT_FIELDS || "keep",
 });
 
 const checkSources = [];
@@ -103,7 +103,7 @@ def run_browser_engine(paths: list[Path], input_fields: str = "keep") -> dict:
             timeout=300,
             env={
                 "PATH": "/usr/bin:/bin:/usr/local/bin",
-                "JWSYNC_INPUT_FIELDS": input_fields,
+                "BRAID_INPUT_FIELDS": input_fields,
             },
         )
     if result.returncode != 0:
@@ -117,7 +117,7 @@ def run_browser_engine(paths: list[Path], input_fields: str = "keep") -> dict:
 def run_python_engine(
     paths: list[Path], tmp_path: Path, input_fields: str = "keep"
 ) -> dict:
-    from jwsync.merge import MergeOptions
+    from braid.merge import MergeOptions
 
     stack = [Backup.open(p) for p in paths]
     try:

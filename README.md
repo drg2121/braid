@@ -1,4 +1,4 @@
-# jwsync
+# Braid
 
 Merge JW Library backups from several devices into a single file you can restore
 everywhere, so your notes, highlights, bookmarks, tags and playlists stop living
@@ -6,13 +6,13 @@ on one device at a time.
 
 JW Library has no cross-device sync for personal study data. It can export a
 `.jwlibrary` backup and restore one, but restoring **replaces** everything on the
-target device. `jwsync` sits in between: it takes the backups from your phone,
+target device. `braid` sits in between: it takes the backups from your phone,
 tablet and laptop, merges them into one, and gives you a file that is safe to
 restore on all of them.
 
 ```
 phone.jwlibrary  ─┐
-tablet.jwlibrary ─┼─▶ jwsync ─▶ merged.jwlibrary ─▶ restore on every device
+tablet.jwlibrary ─┼─▶ braid ─▶ merged.jwlibrary ─▶ restore on every device
 laptop.jwlibrary ─┘
 ```
 
@@ -23,7 +23,7 @@ laptop.jwlibrary ─┘
   understanding: if you delete a note on your phone and then merge with an older
   tablet backup that still has it, the note comes back. Delete on every device,
   or delete after the merge.
-- **Keep your original backups.** `jwsync` never modifies its inputs; it writes a
+- **Keep your original backups.** `braid` never modifies its inputs; it writes a
   new file. Keep the per-device exports until you have confirmed the merged file
   restores correctly.
 - **Restore replaces.** When JW Library restores a backup it wipes the device's
@@ -73,7 +73,7 @@ or held in memory; and the checksum and sizes come from the source archive's own
 directory, because the bytes are identical. Merging a 210 MB and a 51 MB backup
 takes about half a second.
 
-The merge is implemented twice -- `src/jwsync/merge.py` and `web/merge.js` --
+The merge is implemented twice -- `src/braid/merge.py` and `web/merge.js` --
 which is a drift risk, so `tests/test_browser_parity.py` runs both engines over
 the same libraries and fails if their row counts, tags or verification results
 differ.
@@ -94,7 +94,7 @@ pip install -e .
 Or run it straight from a checkout without installing:
 
 ```bash
-python -m jwsync --help
+python -m braid --help
 ```
 
 ## Use it
@@ -102,7 +102,7 @@ python -m jwsync --help
 ### Point and click
 
 ```bash
-jwsync serve
+braid serve
 ```
 
 Opens `http://127.0.0.1:8765` — pick a folder, add this computer's own library
@@ -112,7 +112,7 @@ what the launchers in `launchers/` start.
 ### Look at a backup
 
 ```bash
-jwsync inspect ~/Downloads/UserdataBackup_2026-08-29_iPhone.jwlibrary
+braid inspect ~/Downloads/UserdataBackup_2026-08-29_iPhone.jwlibrary
 ```
 
 ```
@@ -130,7 +130,7 @@ UserdataBackup_2026-08-29_iPhone.jwlibrary
 ### Merge two or more backups
 
 ```bash
-jwsync merge phone.jwlibrary tablet.jwlibrary -o merged.jwlibrary
+braid merge phone.jwlibrary tablet.jwlibrary -o merged.jwlibrary
 ```
 
 The most recently modified backup becomes the base, so argument order does not
@@ -150,7 +150,7 @@ devices already sync and rebuilds one merged file, under one unchanging name,
 whenever any device drops a new backup in:
 
 ```bash
-jwsync watch ~/Library/Mobile\ Documents/com~apple~CloudDocs/JW\ backups
+braid watch ~/Library/Mobile\ Documents/com~apple~CloudDocs/JW\ backups
 ```
 
 ```
@@ -161,14 +161,14 @@ jwsync watch ~/Library/Mobile\ Documents/com~apple~CloudDocs/JW\ backups
 
 The output is always called **`JW Library MERGED.jwlibrary`**, so the file you
 restore on each device never changes name — the cloud provider simply updates it
-in place. Dated copies of every merge are kept in `_jwsync_history/`, and what
+in place. Dated copies of every merge are kept in `_braid_history/`, and what
 has already been merged is remembered there too, so restarting the watcher (or
 running `--once` from cron) never redoes finished work.
 
 Then make it start at login:
 
 ```bash
-jwsync install-agent ~/Library/Mobile\ Documents/com~apple~CloudDocs/JW\ backups
+braid install-agent ~/Library/Mobile\ Documents/com~apple~CloudDocs/JW\ backups
 ```
 
 That writes a launchd agent on macOS, a systemd user unit on Linux, or prints
@@ -179,25 +179,25 @@ asking.
 #### On this computer: no taps at all
 
 On a Mac or PC the library is not something you export — it is a live SQLite
-database inside the app's folder, and `jwsync` can read and write it directly:
+database inside the app's folder, and `braid` can read and write it directly:
 
 ```bash
-jwsync status                      # find it, show what is in it
-jwsync pull ~/JW\ backups          # export it — safe while JW Library is open
-jwsync push "~/JW backups/JW Library MERGED.jwlibrary" --yes   # app must be closed
+braid status                      # find it, show what is in it
+braid pull ~/JW\ backups          # export it — safe while JW Library is open
+braid push "~/JW backups/JW Library MERGED.jwlibrary" --yes   # app must be closed
 ```
 
 `watch` does both for you:
 
 ```bash
-jwsync watch ~/JW\ backups --with-local --push-local
+braid watch ~/JW\ backups --with-local --push-local
 ```
 
 `--with-local` exports this computer's library before every merge. `--push-local`
 installs the merged result back into it afterwards, and is skipped with a message
 whenever JW Library is open, because writing to a live WAL database can corrupt
 it. The previous library is always copied aside first, into
-`~/jwsync-safety-copies/`.
+`~/braid-safety-copies/`.
 
 So on the computer the whole round trip is automatic. Phones and tablets are
 what still need taps.
@@ -210,12 +210,12 @@ and restore stay manual. Everywhere else it is automatic:
 
 | Step | Mac / PC | Phone / tablet |
 | --- | --- | --- |
-| Get the library out | `jwsync pull` | You — Personal Study ▸ ⤒ ▸ Create Backup, save into the shared folder |
-| Notice the new backup | `jwsync watch` | `jwsync watch` |
-| Merge everything | `jwsync watch` | `jwsync watch` |
-| Check nothing was lost | `jwsync watch` | `jwsync watch` |
+| Get the library out | `braid pull` | You — Personal Study ▸ ⤒ ▸ Create Backup, save into the shared folder |
+| Notice the new backup | `braid watch` | `braid watch` |
+| Merge everything | `braid watch` | `braid watch` |
+| Check nothing was lost | `braid watch` | `braid watch` |
 | Move it back to the device | your cloud provider | your cloud provider |
-| Put the library back in | `jwsync push` | You — Personal Study ▸ ⤒ ▸ Restore Backup |
+| Put the library back in | `braid push` | You — Personal Study ▸ ⤒ ▸ Restore Backup |
 
 A round of syncing therefore costs nothing on the computer and a handful of taps
 per phone or tablet. Export where you made changes, restore where you want them.
@@ -237,12 +237,12 @@ backup export at one folder that iCloud Drive, Google Drive or Dropbox already
 syncs, then run:
 
 ```bash
-jwsync sync ~/Library/Mobile\ Documents/com~apple~CloudDocs/JW\ backups
+braid sync ~/Library/Mobile\ Documents/com~apple~CloudDocs/JW\ backups
 ```
 
 `sync` is the one-shot version of `watch`: it merges every `.jwlibrary` in the
 folder, skips its own previous output, writes a timestamped merged file, and
-records what it did in `.jwsync-state.json`. Run it again after nothing has
+records what it did in `.braid-state.json`. Run it again after nothing has
 changed and it tells you so instead of writing another copy.
 
 ### Check that a merge lost nothing
@@ -251,7 +251,7 @@ changed and it tells you so instead of writing another copy.
 yourself:
 
 ```bash
-jwsync verify merged.jwlibrary phone.jwlibrary tablet.jwlibrary
+braid verify merged.jwlibrary phone.jwlibrary tablet.jwlibrary
 ```
 
 It walks every note, highlight, bookmark, tag, study answer, media file and
@@ -321,22 +321,22 @@ Two details that matter and are not obvious:
 - **`IndependentMedia.Hash` is a SHA-256 with a formatting quirk.** JW Library
   renders each byte with a `%x`-style format instead of `%02x`, so bytes below
   `0x10` lose their leading zero and the string is usually shorter than 64
-  characters. `jwsync` reproduces that encoding exactly (`archive.jw_hex`), which
+  characters. `braid` reproduces that encoding exactly (`archive.jw_hex`), which
   is what lets it recognise the same media file exported from two devices.
 - **`manifest.userDataBackup.hash` cannot be reproduced.** It is not a hash of
   the exported database file — the database is re-serialised on export, so no
-  file hash would be stable. `jwsync` regenerates it in the same `jw_hex`
+  file hash would be stable. `braid` regenerates it in the same `jw_hex`
   encoding. If a device ever refuses a merged file, `--hash-mode keep` reuses the
   base backup's original value and `--hash-mode empty` writes an empty string.
 
 On a desktop the app keeps that database in **WAL mode**, and the main file can
 be almost empty while the write-ahead log holds nearly everything — so reading
-it means folding the log in (`jwsync` uses `VACUUM INTO`, which is consistent
+it means folding the log in (`braid` uses `VACUUM INTO`, which is consistent
 even while the app is running), and writing it means deleting the stale log so
-it cannot be replayed over the new database. `jwsync push` does both, and
+it cannot be replayed over the new database. `braid push` does both, and
 refuses outright while JW Library is open.
 
-`jwsync` refuses to merge backups whose `schemaVersion` differs; update JW
+`braid` refuses to merge backups whose `schemaVersion` differs; update JW
 Library on both devices and export again. Schema versions 14–16 are recognised;
 anything else merges with a warning.
 

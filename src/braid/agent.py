@@ -13,13 +13,13 @@ import sys
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-LABEL = "com.jwsync.watch"
+LABEL = "com.braid.watch"
 
 
 def launchd_plist(folder: Path, interval: int, executable: str) -> str:
     args = [executable, "watch", str(folder), "--interval", str(interval)]
     arg_xml = "\n".join(f"    <string>{escape(a)}</string>" for a in args)
-    log = Path.home() / "Library" / "Logs" / "jwsync.log"
+    log = Path.home() / "Library" / "Logs" / "braid.log"
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
   "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -46,7 +46,7 @@ def launchd_plist(folder: Path, interval: int, executable: str) -> str:
 
 def systemd_unit(folder: Path, interval: int, executable: str) -> str:
     return f"""[Unit]
-Description=jwsync -- merge JW Library backups in {folder}
+Description=braid -- merge JW Library backups in {folder}
 
 [Service]
 Type=simple
@@ -85,7 +85,7 @@ def install(folder: Path, interval: int, executable: str | None = None) -> dict:
             "path": str(path),
             "activate": f"launchctl load -w {path}",
             "deactivate": f"launchctl unload -w {path}",
-            "logs": str(Path.home() / "Library" / "Logs" / "jwsync.log"),
+            "logs": str(Path.home() / "Library" / "Logs" / "braid.log"),
         }
 
     if system == "Linux":
@@ -113,11 +113,11 @@ def install(folder: Path, interval: int, executable: str | None = None) -> dict:
 
 
 def _executable() -> str:
-    """Path to the installed ``jwsync`` command, falling back to the module."""
-    candidate = Path(sys.executable).with_name("jwsync")
+    """Path to the installed ``braid`` command, falling back to the module."""
+    candidate = Path(sys.executable).with_name("braid")
     if candidate.is_file():
         return str(candidate)
-    return f"{sys.executable} -m jwsync"
+    return f"{sys.executable} -m braid"
 
 
 __all__ = ["LABEL", "install", "launchd_plist", "systemd_unit", "windows_command"]

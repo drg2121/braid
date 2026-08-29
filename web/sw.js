@@ -4,7 +4,7 @@
 // still be able to combine their backups, so everything the page needs is
 // cached on first visit and served from there afterwards.
 
-const CACHE = "jwsync-v1";
+const CACHE = "braid-v1";
 
 const ASSETS = [
   "./",

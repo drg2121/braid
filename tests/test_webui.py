@@ -12,9 +12,9 @@ from pathlib import Path
 
 import pytest
 
-from jwsync import webui
-from jwsync.archive import Backup
-from jwsync.local import DB_NAME, LocalLibrary, LocalLibraryError
+from braid import webui
+from braid.archive import Backup
+from braid.local import DB_NAME, LocalLibrary, LocalLibraryError
 
 NEWER = "2026-08-01T00:00:00+0000"
 OLDER = "2026-01-01T00:00:00+0000"
@@ -131,7 +131,7 @@ def fake_local(builder, tmp_path, monkeypatch):
 
     library = LocalLibrary(folder)
     monkeypatch.setattr(webui, "find_libraries", lambda: [library])
-    monkeypatch.setattr("jwsync.local.jw_library_is_running", lambda: False)
+    monkeypatch.setattr("braid.local.jw_library_is_running", lambda: False)
     return library
 
 
@@ -178,14 +178,14 @@ def test_local_push_installs_and_reports_the_safety_copy(fake_local, two_backups
 def test_local_push_refuses_while_the_app_is_open(fake_local, two_backups, monkeypatch):
     paths = sorted(str(p) for p in two_backups.glob("*.jwlibrary"))
     merged = webui._merge({"files": paths})["output"]
-    monkeypatch.setattr("jwsync.local.jw_library_is_running", lambda: True)
+    monkeypatch.setattr("braid.local.jw_library_is_running", lambda: True)
 
     with pytest.raises(LocalLibraryError, match="running"):
         webui._local_push({"backup": merged})
 
 
 def test_local_push_refuses_a_file_that_is_not_a_backup(fake_local, tmp_path):
-    from jwsync.archive import ArchiveError
+    from braid.archive import ArchiveError
 
     bogus = tmp_path / "bogus.jwlibrary"
     bogus.write_text("not a zip")

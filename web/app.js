@@ -43,8 +43,8 @@ async function sqlEngine() {
   // A plain relative path is used rather than import.meta.url, because the
   // bundle runs this as a classic script, where import.meta is a parse error
   // even on a branch that never executes.
-  const config = window.JWSYNC_WASM_BASE64
-    ? { wasmBinary: base64ToBytes(window.JWSYNC_WASM_BASE64) }
+  const config = window.BRAID_WASM_BASE64
+    ? { wasmBinary: base64ToBytes(window.BRAID_WASM_BASE64) }
     : { locateFile: (name) => `./vendor/${name}` };
   SQL = await window.initSqlJs(config);
   return SQL;
@@ -181,7 +181,7 @@ async function renderLibrary() {
 /** The privacy line promises offline use; only promise what is actually true. */
 function setPrivacyLine(worksOffline) {
   const offline =
-    worksOffline || location.protocol === "file:" || window.JWSYNC_WASM_BASE64;
+    worksOffline || location.protocol === "file:" || window.BRAID_WASM_BASE64;
   $("privacy").textContent =
     "Nothing is uploaded. Everything happens on this device" +
     (offline ? ", and this page works with no internet." : ".");
@@ -427,10 +427,10 @@ async function doMerge() {
     progressText.textContent = "Writing the combined file…";
     const manifest = JSON.parse(JSON.stringify(base.manifest));
     const stamp = new Date().toISOString().slice(0, 10);
-    const name = `JW Library COMBINED ${stamp}.jwlibrary`;
+    const name = `Combined library ${stamp}.jwlibrary`;
     manifest.name = name;
     manifest.creationDate = new Date().toISOString();
-    manifest.userDataBackup.deviceName = "jwsync combined";
+    manifest.userDataBackup.deviceName = "braid combined";
     manifest.userDataBackup.hash = "";
 
     const builder = new ZipBuilder();
@@ -535,7 +535,7 @@ $("save").addEventListener("click", () => {
 $("saveStored").addEventListener("click", async () => {
   const stored = await getPerson(personId);
   if (stored?.library) {
-    download(stored.library, stored.libraryName || "JW Library COMBINED.jwlibrary");
+    download(stored.library, stored.libraryName || "Combined library.jwlibrary");
   }
 });
 

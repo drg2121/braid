@@ -1,6 +1,6 @@
 // The merge engine, in the browser.
 //
-// This is the same algorithm as the Python implementation in src/jwsync/merge.py
+// This is the same algorithm as the Python implementation in src/braid/merge.py
 // and must stay in step with it: every table is keyed on the identity JW
 // Library itself uses, so the same note or highlight seen from two devices
 // collapses into one row. The merge only ever adds, and merging the same

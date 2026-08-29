@@ -5,7 +5,7 @@
 // playlist item in each source and asserting it is findable in the merged
 // database under the identity the merge uses.
 //
-// Mirrors src/jwsync/verify.py.
+// Mirrors src/braid/verify.py.
 
 import {
   all,

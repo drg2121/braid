@@ -1,4 +1,4 @@
-"""A small local web interface for jwsync.
+"""A small local web interface for braid.
 
 The page is served from the standard library only and binds to localhost. It
 works on folders rather than uploads: JW Library backups routinely run to
@@ -32,7 +32,7 @@ PAGE = r"""<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>jwsync</title>
+<title>braid</title>
 <style>
   :root {
     --bg: #f6f6f8; --panel: #ffffff; --ink: #1a1a1f; --muted: #5f6069;
@@ -91,7 +91,7 @@ PAGE = r"""<!doctype html>
 </head>
 <body>
 <main>
-  <h1>jwsync</h1>
+  <h1>braid</h1>
   <p class="lede">Merge JW Library backups from several devices into one file you
   can restore everywhere.</p>
 
@@ -299,12 +299,12 @@ $("folder").addEventListener("keydown", (e) => { if (e.key === "Enter") scan(); 
 $("merge").addEventListener("click", merge);
 
 try {
-  const saved = localStorage.getItem("jwsync.folder");
+  const saved = localStorage.getItem("braid.folder");
   if (saved) { $("folder").value = saved; scan(); }
 } catch (err) { /* private windows and blocked storage are fine */ }
 
 $("folder").addEventListener("change", () => {
-  try { localStorage.setItem("jwsync.folder", $("folder").value.trim()); }
+  try { localStorage.setItem("braid.folder", $("folder").value.trim()); }
   catch (err) { /* nothing to do if storage is unavailable */ }
 });
 
@@ -362,7 +362,7 @@ def _merge(payload: dict) -> dict:
         )
         options = MergeOptions(input_fields=payload.get("inputFields", "keep"))
 
-        with tempfile.TemporaryDirectory(prefix="jwsync-web-") as tmp:
+        with tempfile.TemporaryDirectory(prefix="braid-web-") as tmp:
             db_path, media, report = merge_backups(base, sources, Path(tmp), options)
             manifest = base.manifest
             manifest.device_name = (
@@ -433,7 +433,7 @@ def _local_push(payload: dict) -> dict:
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "jwsync"
+    server_version = "braid"
 
     def log_message(self, fmt: str, *args: object) -> None:  # quieter console
         pass
@@ -498,7 +498,7 @@ class Handler(BaseHTTPRequestHandler):
 def serve(host: str = "127.0.0.1", port: int = 8765, open_browser: bool = True) -> None:
     httpd = ThreadingHTTPServer((host, port), Handler)
     url = f"http://{host}:{port}/"
-    print(f"jwsync is running at {url}  (Ctrl-C to stop)")
+    print(f"braid is running at {url}  (Ctrl-C to stop)")
     if open_browser:
         threading.Timer(0.5, lambda: webbrowser.open(url)).start()
     try:

@@ -14,9 +14,9 @@ from pathlib import Path
 
 import pytest
 
-from jwsync.archive import Backup, write_backup
-from jwsync.merge import merge_backups
-from jwsync.verify import verify
+from braid.archive import Backup, write_backup
+from braid.merge import merge_backups
+from braid.verify import verify
 
 NEWER = "2026-08-01T00:00:00+0000"
 OLDER = "2026-01-01T00:00:00+0000"

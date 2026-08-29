@@ -1,13 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img"
-     aria-label="jwsync">
+     aria-label="Braid">
   <rect width="512" height="512" rx="112" fill="#5a2d8c"/>
-  <!-- Two libraries flowing into one. -->
-  <g fill="none" stroke="#ffffff" stroke-width="30" stroke-linecap="round">
-    <path d="M150 150 v90 a60 60 0 0 0 60 60 h92"/>
-    <path d="M362 150 v90 a60 60 0 0 1 -60 60 h-92"/>
-    <path d="M256 300 v70"/>
+  <g fill="none" stroke="#ffffff" stroke-width="40" stroke-linecap="round">
+    <!-- Separate strands gathering into one. Kept to three strokes: anything
+         more turns to mush at the size a home-screen icon is actually seen. -->
+    <path d="M148 144 C148 244 256 232 256 302"/>
+    <path d="M364 144 C364 244 256 232 256 302"/>
+    <path d="M256 144 V386"/>
   </g>
-  <circle cx="150" cy="150" r="34" fill="#ffffff"/>
-  <circle cx="362" cy="150" r="34" fill="#ffffff"/>
-  <circle cx="256" cy="392" r="34" fill="#ffffff"/>
 </svg>

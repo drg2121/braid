@@ -120,7 +120,7 @@ class Backup:
             raise ArchiveError(f"{path} is not a ZIP archive (expected .jwlibrary)")
 
         own = workdir is None
-        target = Path(workdir) if workdir else Path(tempfile.mkdtemp(prefix="jwsync-"))
+        target = Path(workdir) if workdir else Path(tempfile.mkdtemp(prefix="braid-"))
         target.mkdir(parents=True, exist_ok=True)
 
         with zipfile.ZipFile(path) as zf:

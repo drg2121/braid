@@ -12,8 +12,8 @@ from pathlib import Path
 
 import pytest
 
-from jwsync.archive import Backup
-from jwsync.local import (
+from braid.archive import Backup
+from braid.local import (
     DB_NAME,
     LocalLibrary,
     LocalLibraryError,
@@ -118,7 +118,7 @@ def test_export_folds_in_the_write_ahead_log(local_library, tmp_path):
 def test_install_refuses_while_the_app_is_running(local_library, tmp_path, monkeypatch):
     library = local_library()
     exported = library.export(tmp_path / "exported.jwlibrary")
-    monkeypatch.setattr("jwsync.local.jw_library_is_running", lambda: True)
+    monkeypatch.setattr("braid.local.jw_library_is_running", lambda: True)
 
     with pytest.raises(LocalLibraryError, match="running"):
         library.install(exported)
@@ -127,7 +127,7 @@ def test_install_refuses_while_the_app_is_running(local_library, tmp_path, monke
 def test_install_copies_the_old_library_aside_first(
     builder, local_library, tmp_path, monkeypatch
 ):
-    monkeypatch.setattr("jwsync.local.jw_library_is_running", lambda: False)
+    monkeypatch.setattr("braid.local.jw_library_is_running", lambda: False)
     library = local_library()
 
     other = builder("phone.jwlibrary", "Phone", OLDER)
@@ -151,7 +151,7 @@ def test_install_copies_the_old_library_aside_first(
 def test_install_replaces_the_database_and_adds_media(
     builder, local_library, tmp_path, monkeypatch
 ):
-    monkeypatch.setattr("jwsync.local.jw_library_is_running", lambda: False)
+    monkeypatch.setattr("braid.local.jw_library_is_running", lambda: False)
     library = local_library()
 
     other = builder("merged.jwlibrary", "Merged", NEWER)
@@ -175,7 +175,7 @@ def test_install_replaces_the_database_and_adds_media(
 def test_install_leaves_no_stale_write_ahead_log(
     builder, local_library, tmp_path, monkeypatch
 ):
-    monkeypatch.setattr("jwsync.local.jw_library_is_running", lambda: False)
+    monkeypatch.setattr("braid.local.jw_library_is_running", lambda: False)
     library = local_library()
 
     # SQLite removes the WAL on a clean close, so write the sidecars a crashed
@@ -209,11 +209,11 @@ def test_a_full_round_trip_keeps_everything(
     builder, local_library, tmp_path, monkeypatch
 ):
     """pull, merge with a phone backup, push -- nothing lost at either end."""
-    from jwsync.archive import write_backup
-    from jwsync.merge import merge_backups
-    from jwsync.verify import verify
+    from braid.archive import write_backup
+    from braid.merge import merge_backups
+    from braid.verify import verify
 
-    monkeypatch.setattr("jwsync.local.jw_library_is_running", lambda: False)
+    monkeypatch.setattr("braid.local.jw_library_is_running", lambda: False)
     library = local_library()
 
     pulled = library.export(tmp_path / "laptop.jwlibrary", device_name="Laptop")
@@ -251,11 +251,11 @@ def test_a_full_round_trip_keeps_everything(
 def test_discovery_returns_only_folders_that_hold_a_database(tmp_path, monkeypatch):
     empty = tmp_path / "empty"
     empty.mkdir()
-    monkeypatch.setattr("jwsync.local._macos_candidates", lambda: [empty])
-    monkeypatch.setattr("jwsync.local.platform.system", lambda: "Darwin")
+    monkeypatch.setattr("braid.local._macos_candidates", lambda: [empty])
+    monkeypatch.setattr("braid.local.platform.system", lambda: "Darwin")
     assert find_libraries() == []
 
 
 def test_discovery_on_an_unsupported_platform_is_empty(monkeypatch):
-    monkeypatch.setattr("jwsync.local.platform.system", lambda: "Linux")
+    monkeypatch.setattr("braid.local.platform.system", lambda: "Linux")
     assert find_libraries() == []

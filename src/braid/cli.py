@@ -1,4 +1,4 @@
-"""Command line interface for jwsync."""
+"""Command line interface for braid."""
 
 from __future__ import annotations
 
@@ -30,7 +30,7 @@ from .report import MergeReport
 from .verify import verify
 from .watch import STABLE_OUTPUT_NAME, watch
 
-STATE_FILENAME = ".jwsync-state.json"
+STATE_FILENAME = ".braid-state.json"
 
 
 # -- helpers ---------------------------------------------------------------
@@ -44,7 +44,7 @@ def _open_all(paths: list[Path], stack: list[Backup]) -> list[Backup]:
         if backup.manifest.schema_version not in SUPPORTED_SCHEMA_VERSIONS:
             print(
                 f"warning: {path.name} uses schema version "
-                f"{backup.manifest.schema_version}, which jwsync has not been "
+                f"{backup.manifest.schema_version}, which braid has not been "
                 f"validated against (known: "
                 f"{sorted(SUPPORTED_SCHEMA_VERSIONS)})",
                 file=sys.stderr,
@@ -129,7 +129,7 @@ def _run_merge(
     try:
         backups = _open_all(paths, stack)
         base, sources = _pick_base(backups)
-        with tempfile.TemporaryDirectory(prefix="jwsync-out-") as tmp:
+        with tempfile.TemporaryDirectory(prefix="braid-out-") as tmp:
             db_path, media, report = merge_backups(base, sources, Path(tmp), options)
             manifest = base.manifest
             manifest.device_name = device_name or f"{base.manifest.device_name} (merged)"
@@ -396,13 +396,13 @@ def cmd_serve(args: argparse.Namespace) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="jwsync",
+        prog="braid",
         description=(
             "Merge JW Library backups from several devices into one, so notes, "
             "highlights, bookmarks, tags and playlists survive on all of them."
         ),
     )
-    parser.add_argument("--version", action="version", version=f"jwsync {__version__}")
+    parser.add_argument("--version", action="version", version=f"braid {__version__}")
     sub = parser.add_subparsers(dest="command", required=True)
 
     def add_merge_options(p: argparse.ArgumentParser) -> None:

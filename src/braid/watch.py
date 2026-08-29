@@ -25,10 +25,10 @@ from .verify import VerifyResult, verify
 
 #: Name of the merged file. It never changes, so the file you restore on each
 #: device is always the same one and the cloud provider simply updates it.
-STABLE_OUTPUT_NAME = "JW Library MERGED.jwlibrary"
+STABLE_OUTPUT_NAME = "Combined library.jwlibrary"
 
 #: Where dated copies of previous merges and the watcher's state are kept.
-HISTORY_DIRNAME = "_jwsync_history"
+HISTORY_DIRNAME = "_braid_history"
 
 STATE_FILENAME = "watch-state.json"
 
@@ -144,10 +144,10 @@ def merge_folder(
 
         import tempfile
 
-        with tempfile.TemporaryDirectory(prefix="jwsync-watch-") as tmp:
+        with tempfile.TemporaryDirectory(prefix="braid-watch-") as tmp:
             db_path, media, report = merge_backups(base, sources, Path(tmp), options)
             manifest = base.manifest
-            manifest.device_name = "jwsync merged"
+            manifest.device_name = "braid merged"
             output = folder / STABLE_OUTPUT_NAME
             # write_backup writes to a .part file and renames, so a device
             # syncing the folder never sees a half-written archive.

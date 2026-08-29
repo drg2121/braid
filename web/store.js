@@ -11,7 +11,7 @@
 // One store can hold several people, because a shared iPad is normal and
 // because someone helping others should not mix their libraries together.
 
-const STORAGE_DB_NAME = "jwsync";
+const STORAGE_DB_NAME = "braid";
 const STORAGE_DB_VERSION = 1;
 const PEOPLE_STORE = "people";
 
@@ -220,8 +220,8 @@ export async function forgetLibrary(id) {
 /** Which person was last in use, so the page opens where it was left. */
 export function rememberCurrentPerson(id) {
   try {
-    if (id) localStorage.setItem("jwsync.person", id);
-    else localStorage.removeItem("jwsync.person");
+    if (id) localStorage.setItem("braid.person", id);
+    else localStorage.removeItem("braid.person");
   } catch {
     // A private window without storage still works, it just forgets.
   }
@@ -229,7 +229,7 @@ export function rememberCurrentPerson(id) {
 
 export function currentPersonId() {
   try {
-    return localStorage.getItem("jwsync.person");
+    return localStorage.getItem("braid.person");
   } catch {
     return null;
   }

@@ -1,6 +1,6 @@
 # Keeping JW Library in step across your devices
 
-This guide is for using jwsync, not for developing it. You do not need to know
+This guide is for using braid, not for developing it. You do not need to know
 anything about programming.
 
 ## What it does
@@ -10,7 +10,7 @@ device at a time. It can make a backup and it can restore one — but restoring
 **replaces** everything already on that device, so you cannot simply restore
 your phone's backup onto your tablet without losing whatever the tablet had.
 
-jwsync merges those backups instead. It takes what is on your phone, your tablet
+Braid merges those backups instead. It takes what is on your phone, your tablet
 and your computer, combines them into one library that has everything, and gives
 you a single file to restore everywhere.
 
@@ -19,7 +19,7 @@ Nothing you have is deleted. Nothing leaves your computer.
 ## Before you start
 
 **Keep your original backups** until you have checked that the merged one looks
-right. jwsync never changes them — it only writes new files — so they are your
+right. Braid never changes them — it only writes new files — so they are your
 way back if anything looks wrong.
 
 ## Two ways to do this
@@ -37,7 +37,7 @@ on reading below.
 
 ### Put it on your home screen first
 
-Open the page (your congregation's link, or the `jwsync.html` file if someone
+Open the page (your congregation's link, or the `braid.html` file if someone
 sent you one). On an iPhone or iPad, tap the **Share** button and then **Add to
 Home Screen**. It then opens like an app, in one tap, and keeps working with no
 internet.
@@ -46,7 +46,7 @@ internet.
 
 1. On **each** device: JW Library ▸ **Personal Study** ▸ the **⤒** icon ▸
    **Create Backup**, and save it to Files.
-2. Open jwsync, tap **Choose a backup**, and pick all of them.
+2. Open braid, tap **Choose a backup**, and pick all of them.
 3. Combining starts on its own. When it finishes it confirms that every note,
    highlight, bookmark, tag and playlist was found in the result.
 4. Tap **Save the combined file** and save it to Files.
@@ -54,11 +54,11 @@ internet.
 
 ### Every time after that
 
-jwsync remembers your combined library, so you only need a fresh backup from the
+Braid remembers your combined library, so you only need a fresh backup from the
 device you actually used:
 
 1. On that one device: **Personal Study ▸ ⤒ ▸ Create Backup**.
-2. Open jwsync. It already shows your library — how many highlights and notes
+2. Open braid. It already shows your library — how many highlights and notes
    are in it, and which devices it draws on.
 3. Tap **Add the new backup** and pick it. Combining starts on its own.
 4. Save the result and restore it wherever you want it.
@@ -131,22 +131,22 @@ Any folder that iCloud Drive, Google Drive or Dropbox already syncs will do.
 Call it something like **JW backups**. This is where every device's backup goes,
 and where the merged one comes back.
 
-### 2. Open jwsync
+### 2. Open braid
 
 Download the project from GitHub (green **Code** button ▸ **Download ZIP**),
 unzip it, open the `launchers` folder and double-click:
 
-- **Mac** — `Start jwsync (Mac).command`
-- **Windows** — `Start jwsync (Windows).bat`
+- **Mac** — `Start braid (Mac).command`
+- **Windows** — `Start braid (Windows).bat`
 
 A window opens in your browser. Leave the small black window open behind it;
-closing that one stops jwsync.
+closing that one stops braid.
 
 > **The first time on a Mac**, you may see *"cannot be opened because it is from
 > an unidentified developer."* Right-click the file, choose **Open**, then click
 > **Open** again. You only ever do that once.
 
-Macs already have everything jwsync needs. On Windows, if it tells you Python is
+Macs already have everything braid needs. On Windows, if it tells you Python is
 missing, install it from python.org and tick **Add Python to PATH** during the
 installation.
 
@@ -164,7 +164,7 @@ Do this on every device where you have made notes or highlights since last time.
 
 ### On your computer
 
-1. Open jwsync (double-click the launcher).
+1. Open braid (double-click the launcher).
 2. Type or paste the path of your shared folder and click **Scan**. It remembers
    it for next time.
 3. If JW Library is installed on this computer, you will see a card for it. Click
@@ -190,21 +190,21 @@ and confirmed each one is in the merged file.
 
 If JW Library is installed here, quit it completely, then click **Put the merged
 library back into it**. Your current library is copied aside first, into a folder
-called `jwsync-safety-copies` in your home folder.
+called `braid-safety-copies` in your home folder.
 
 ## Letting it run by itself
 
-Once you trust it, jwsync can watch the folder and merge on its own, so the only
+Once you trust it, braid can watch the folder and merge on its own, so the only
 thing left is the tapping on your phone. In a Terminal or Command Prompt:
 
 ```bash
-jwsync watch "~/JW backups" --with-local --push-local
+braid watch "~/JW backups" --with-local --push-local
 ```
 
 To have that start every time you log in:
 
 ```bash
-jwsync install-agent "~/JW backups"
+braid install-agent "~/JW backups"
 ```
 
 That writes the setup and prints the one command that switches it on. It does not
@@ -212,34 +212,34 @@ switch it on by itself.
 
 ## Things worth knowing
 
-**Deleting is different from adding.** jwsync only ever adds. If you delete a
+**Deleting is different from adding.** braid only ever adds. If you delete a
 note on your phone and then merge with an older tablet backup that still has it,
 the note comes back. Delete it everywhere, or delete it after merging.
 
 **A study answer that differs.** If you answered the same study question
-differently on two devices, jwsync cannot tell which is newer — JW Library does
+differently on two devices, braid cannot tell which is newer — JW Library does
 not record that. It keeps the answer from your most recent backup and says so in
 the report.
 
 **Bookmarks.** JW Library allows ten per publication. If merging would need an
-eleventh, jwsync says which one it could not fit rather than dropping it quietly.
+eleventh, braid says which one it could not fit rather than dropping it quietly.
 
 **A backup that has not downloaded yet.** If iCloud shows a file as a cloud icon
-rather than a real file, jwsync waits for it instead of merging a half-downloaded
+rather than a real file, braid waits for it instead of merging a half-downloaded
 file. Right-click the folder and choose **Keep Downloaded** to avoid this.
 
 **Both devices must run the same JW Library version.** If one is much older,
-jwsync will say the backups use different schema versions. Update both and export
+Braid will say the backups use different schema versions. Update both and export
 again.
 
 ## If something goes wrong
 
 Nothing you had is lost — your original backups are untouched, and every merge is
-kept in the `_jwsync_history` folder alongside the merged file.
+kept in the `_braid_history` folder alongside the merged file.
 
 - **A device looks wrong after restoring** — restore that device's own original
   backup, which is still in your shared folder.
 - **The computer's library looks wrong** — the previous one is in
-  `jwsync-safety-copies` in your home folder, in a dated folder.
-- **jwsync says something is missing** — do not restore that file. The report
+  `braid-safety-copies` in your home folder, in a dated folder.
+- **braid says something is missing** — do not restore that file. The report
   names exactly what it could not find; that is worth reporting as a bug.

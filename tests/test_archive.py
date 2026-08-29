@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from jwsync.archive import (
+from braid.archive import (
     ArchiveError,
     Backup,
     Manifest,

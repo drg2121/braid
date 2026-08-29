@@ -95,7 +95,7 @@ def build(out_path: Path) -> Path:
 
     replacement = (
         "<script>\n"
-        f"window.JWSYNC_WASM_BASE64 = \"{base64.b64encode(wasm).decode('ascii')}\";\n"
+        f"window.BRAID_WASM_BASE64 = \"{base64.b64encode(wasm).decode('ascii')}\";\n"
         "</script>\n"
         "<script>\n"
         f"{sql_js}\n"
@@ -141,7 +141,7 @@ def main() -> int:
         "-o",
         "--output",
         type=Path,
-        default=HERE.parent / "dist" / "jwsync.html",
+        default=HERE.parent / "dist" / "braid.html",
         help="where to write the bundle",
     )
     args = parser.parse_args()

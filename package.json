@@ -1,8 +1,8 @@
 {
-  "name": "jwsync-web",
+  "name": "braid-web",
   "private": true,
   "version": "0.1.0",
-  "description": "Browser build of jwsync: merge JW Library backups with no computer involved",
+  "description": "Browser build of braid: merge JW Library backups with no computer involved",
   "type": "module",
   "license": "MIT",
   "scripts": {

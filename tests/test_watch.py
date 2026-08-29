@@ -7,9 +7,9 @@ from pathlib import Path
 
 import pytest
 
-from jwsync import agent
-from jwsync.archive import Backup
-from jwsync.watch import (
+from braid import agent
+from braid.archive import Backup
+from braid.watch import (
     HISTORY_DIRNAME,
     STABLE_OUTPUT_NAME,
     STATE_FILENAME,
@@ -208,7 +208,7 @@ def test_a_change_must_settle_before_a_continuous_watch_merges(
         if polls["n"] >= 3:
             raise KeyboardInterrupt
 
-    monkeypatch.setattr("jwsync.watch.time.sleep", fake_sleep)
+    monkeypatch.setattr("braid.watch.time.sleep", fake_sleep)
     lines, log = log_lines()
     watch(folder, interval=0, log=log)
 
@@ -223,11 +223,11 @@ def test_a_change_must_settle_before_a_continuous_watch_merges(
 def test_launchd_plist_is_valid_xml_and_names_the_folder(folder):
     import plistlib
 
-    text = agent.launchd_plist(folder, 45, "/usr/local/bin/jwsync")
+    text = agent.launchd_plist(folder, 45, "/usr/local/bin/braid")
     parsed = plistlib.loads(text.encode())
     assert parsed["Label"] == agent.LABEL
     assert parsed["ProgramArguments"][:3] == [
-        "/usr/local/bin/jwsync",
+        "/usr/local/bin/braid",
         "watch",
         str(folder),
     ]
@@ -240,13 +240,13 @@ def test_launchd_plist_escapes_a_folder_with_an_ampersand(tmp_path):
 
     odd = tmp_path / "JW & backups"
     odd.mkdir()
-    parsed = plistlib.loads(agent.launchd_plist(odd, 30, "jwsync").encode())
+    parsed = plistlib.loads(agent.launchd_plist(odd, 30, "braid").encode())
     assert str(odd) in parsed["ProgramArguments"]
 
 
 def test_systemd_unit_mentions_the_command(folder):
-    unit = agent.systemd_unit(folder, 60, "/usr/bin/jwsync")
-    assert f"ExecStart=/usr/bin/jwsync watch {folder} --interval 60" in unit
+    unit = agent.systemd_unit(folder, 60, "/usr/bin/braid")
+    assert f"ExecStart=/usr/bin/braid watch {folder} --interval 60" in unit
 
 
 def test_install_writes_a_definition_but_does_not_start_it(
@@ -255,7 +255,7 @@ def test_install_writes_a_definition_but_does_not_start_it(
     monkeypatch.setenv("HOME", str(tmp_path))
     monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
 
-    info = agent.install(folder, 30, executable="jwsync")
+    info = agent.install(folder, 30, executable="braid")
     assert "activate" in info and info["activate"]
     if info["path"]:
         assert Path(info["path"]).is_file()

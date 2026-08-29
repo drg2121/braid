@@ -1,10 +1,10 @@
 @echo off
-REM Double-click this file to open jwsync.
+REM Double-click this file to open Braid.
 setlocal
 
 cd /d "%~dp0.."
 
-echo Starting jwsync...
+echo Starting Braid...
 echo.
 
 set "PYTHON="
@@ -16,7 +16,7 @@ for %%P in (py python python3) do (
 )
 
 if not defined PYTHON (
-  echo jwsync needs Python 3.9 or newer, and none was found.
+  echo Braid needs Python 3.9 or newer, and none was found.
   echo.
   echo Install it from https://www.python.org/downloads/
   echo During installation, tick "Add Python to PATH".
@@ -29,21 +29,21 @@ if not defined PYTHON (
 
 set "PYTHONPATH=%CD%\src;%PYTHONPATH%"
 
-%PYTHON% -m jwsync --version >nul 2>&1
+%PYTHON% -m braid --version >nul 2>&1
 if errorlevel 1 (
-  echo Could not start jwsync from %CD%.
+  echo Could not start Braid from %CD%.
   echo Make sure this file is still inside the folder you unzipped.
   echo.
   pause
   exit /b 1
 )
 
-echo jwsync is opening in your browser.
-echo Leave this window open while you use it. Close it to stop jwsync.
+echo Braid is opening in your browser.
+echo Leave this window open while you use it. Close it to stop braid.
 echo.
 
-%PYTHON% -m jwsync serve
+%PYTHON% -m braid serve
 
 echo.
-echo jwsync has stopped.
+echo Braid has stopped.
 pause

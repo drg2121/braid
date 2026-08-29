@@ -1,0 +1,54 @@
+name: Pages
+
+# Publishes web/ so the page has an address people can open on a phone.
+# The page is entirely static and does its work in the browser; nothing is
+# uploaded anywhere, so there is no server side to deploy.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "web/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time; queued runs supersede rather than interleave.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the page for stray references
+        run: |
+          # Every asset must be relative: the site is served from a
+          # subdirectory, so a leading slash would resolve to the wrong place.
+          if grep -nE '(src|href)="/[^/]' web/index.html; then
+            echo "web/index.html links to an absolute path" >&2
+            exit 1
+          fi
+
+      - name: Build the single-file version people can be sent directly
+        run: python3 web/build.py --output web/braid.html
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

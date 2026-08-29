@@ -3,8 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from jwsync.archive import Backup
-from jwsync.cli import STATE_FILENAME, main
+from braid.archive import Backup
+from braid.cli import STATE_FILENAME, main
 
 NEWER = "2026-08-01T00:00:00+0000"
 OLDER = "2026-01-01T00:00:00+0000"

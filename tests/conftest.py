@@ -17,7 +17,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from jwsync.archive import jw_hex  # noqa: E402
+from braid.archive import jw_hex  # noqa: E402
 
 SCHEMA_PATH = Path(__file__).parent / "fixtures" / "schema_v16.sql"
 TABLES_MARKER = "-- >>> TABLES AND INDEXES"

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Double-click this file to open jwsync.
+# Double-click this file to open Braid.
 #
 # The first time, macOS may say the file is from an unidentified developer.
 # If that happens: right-click this file, choose Open, then click Open again.
@@ -7,7 +7,7 @@
 
 cd "$(dirname "$0")/.." || exit 1
 
-echo "Starting jwsync…"
+echo "Starting Braid…"
 echo
 
 find_python() {
@@ -25,7 +25,7 @@ find_python() {
 PYTHON="$(find_python)"
 
 if [ -z "$PYTHON" ]; then
-  echo "jwsync needs Python 3.9 or newer, and none was found."
+  echo "Braid needs Python 3.9 or newer, and none was found."
   echo
   echo "Every Mac normally ships with it. To install it, open Terminal and run:"
   echo "    xcode-select --install"
@@ -38,19 +38,19 @@ fi
 
 export PYTHONPATH="$PWD/src:$PYTHONPATH"
 
-if ! "$PYTHON" -m jwsync --version >/dev/null 2>&1; then
-  echo "Could not start jwsync from $PWD."
+if ! "$PYTHON" -m braid --version >/dev/null 2>&1; then
+  echo "Could not start Braid from $PWD."
   echo "Make sure this file is still inside the folder you unzipped."
   echo
   read -r -p "Press Return to close this window. "
   exit 1
 fi
 
-echo "jwsync is opening in your browser."
-echo "Leave this window open while you use it. Close it to stop jwsync."
+echo "Braid is opening in your browser."
+echo "Leave this window open while you use it. Close it to stop braid."
 echo
 
-"$PYTHON" -m jwsync serve
+"$PYTHON" -m braid serve
 
 echo
-read -r -p "jwsync has stopped. Press Return to close this window. "
+read -r -p "Braid has stopped. Press Return to close this window. "

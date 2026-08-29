@@ -12,8 +12,8 @@ from pathlib import Path
 
 import pytest
 
-from jwsync.archive import Backup
-from jwsync.merge import MAX_BOOKMARK_SLOT, MergeError, MergeOptions, merge_backups
+from braid.archive import Backup
+from braid.merge import MAX_BOOKMARK_SLOT, MergeError, MergeOptions, merge_backups
 
 NEWER = "2026-08-01T00:00:00+0000"
 OLDER = "2026-01-01T00:00:00+0000"
@@ -22,7 +22,7 @@ OLDER = "2026-01-01T00:00:00+0000"
 def run_merge(base_path: Path, *source_paths: Path, options: MergeOptions | None = None):
     """Merge and hand back an open connection to the result plus the report."""
     stack = [Backup.open(base_path)] + [Backup.open(p) for p in source_paths]
-    tmp = tempfile.mkdtemp(prefix="jwsync-test-")
+    tmp = tempfile.mkdtemp(prefix="braid-test-")
     try:
         db_path, media, report = merge_backups(
             stack[0], stack[1:], Path(tmp), options
@@ -505,7 +505,7 @@ def test_the_newest_backup_becomes_the_base(builder):
     newer = b.build()
 
     # Order of arguments should not matter; the newer file wins the base slot.
-    from jwsync.cli import _pick_base
+    from braid.cli import _pick_base
 
     stack = [Backup.open(older), Backup.open(newer)]
     try:

@@ -16,7 +16,7 @@ const store = await import("./store.js");
 async function wipe() {
   store.resetConnection();
   await new Promise((resolve, reject) => {
-    const request = indexedDB.deleteDatabase("jwsync");
+    const request = indexedDB.deleteDatabase("braid");
     request.onsuccess = resolve;
     request.onerror = () => reject(request.error);
     request.onblocked = resolve;

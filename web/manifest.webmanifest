@@ -1,6 +1,6 @@
 {
-  "name": "jwsync",
-  "short_name": "jwsync",
+  "name": "Braid",
+  "short_name": "Braid",
   "description": "Combine JW Library backups from several devices into one.",
   "start_url": "./",
   "scope": "./",
