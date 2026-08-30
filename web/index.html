@@ -52,6 +52,11 @@
   html{-webkit-text-size-adjust:100%}
   body{
     margin:0;min-height:100dvh;background:var(--paper);color:var(--ink);
+    /* Kills double-tap-to-zoom, which fires by accident on a page whose main
+       action is a button people tap in a hurry. Pinch to zoom still works, so
+       nobody who needs to enlarge the text loses it -- which is why this is
+       here rather than user-scalable=no. */
+    touch-action:manipulation;
     font:1.0625rem/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI Variable Text",
          "Segoe UI",Roboto,system-ui,sans-serif;
     -webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;

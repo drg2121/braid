@@ -1,0 +1,53 @@
+headersOrigin = "config"
+plugins = []
+redirects = []
+
+[functions]
+
+[functions."*"]
+
+[build]
+publish = "/Users/cosmind/Downloads/jwsinc/web"
+publishOrigin = "config"
+commandOrigin = "config"
+command = "python3 web/build.py --output web/braid.html"
+
+[build.environment]
+PYTHON_VERSION = "3.11"
+
+[build.processing]
+
+[build.processing.css]
+
+[build.processing.html]
+
+[build.processing.images]
+
+[build.processing.js]
+
+[build.services]
+
+[[headers]]
+for = "/*"
+
+[headers.values]
+X-Content-Type-Options = "nosniff"
+Referrer-Policy = "no-referrer"
+
+[[headers]]
+for = "/index.html"
+
+[headers.values]
+Cache-Control = "no-cache"
+
+[[headers]]
+for = "/*.js"
+
+[headers.values]
+Cache-Control = "no-cache"
+
+[[headers]]
+for = "/vendor/*"
+
+[headers.values]
+Cache-Control = "public, max-age=604800"
