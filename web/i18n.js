@@ -99,8 +99,8 @@ const STRINGS = {
 
     "set.title": "Setări",
     "set.answers": "Dacă un răspuns de studiu diferă",
-    "set.keep": "Păstrează cel mai recent",
-    "set.overwrite": "Ia-l pe al celuilalt dispozitiv",
+    "set.keep": "Cea mai nouă",
+    "set.overwrite": "Celălalt dispozitiv",
     "set.people": "Mai multe persoane",
     "set.peopleWhy": "Dacă telefonul acesta e folosit și de altcineva, poate avea biblioteca lui, separată de a ta. Dacă ești singurul care îl folosește, lasă cum e.",
     "set.whose": "Numele tău",
@@ -215,8 +215,8 @@ const STRINGS = {
 
     "set.title": "Settings",
     "set.answers": "If a study answer differs",
-    "set.keep": "Keep the most recent",
-    "set.overwrite": "Take the other device's",
+    "set.keep": "Most recent",
+    "set.overwrite": "Other device",
     "set.people": "More than one person",
     "set.peopleWhy": "If someone else uses this phone, they can keep their own library, separate from yours. If you are the only one, leave this alone.",
     "set.whose": "Your name",

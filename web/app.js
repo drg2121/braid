@@ -506,7 +506,7 @@ async function doMerge() {
     }
 
     const report = await mergeInto(db, engine.Database, base, sources, mediaPlan, {
-      inputFields: $("inputFields").value,
+      inputFields: answerPolicy(),
       onProgress: (message) => {
         progressText.textContent = message;
       },
@@ -951,7 +951,26 @@ async function retranslate() {
   paintSegment($("themeSeg"), currentTheme(), "themeSet");
 }
 
+/** Which answer wins when two devices disagree; read off the segment. */
+function answerPolicy() {
+  const pressed = $("answerSeg").querySelector('[aria-pressed="true"]');
+  return pressed?.dataset.answer || "keep";
+}
+
+const ANSWER_KEY = "braid.answers";
+
 function wireSettings() {
+  $("answerSeg").addEventListener("click", (event) => {
+    const choice = event.target.closest("button")?.dataset.answer;
+    if (!choice) return;
+    paintSegment($("answerSeg"), choice, "answer");
+    try {
+      localStorage.setItem(ANSWER_KEY, choice);
+    } catch {
+      // The default applies again next visit; nothing is lost by that.
+    }
+  });
+
   $("langSeg").addEventListener("click", async (event) => {
     const choice = event.target.closest("button")?.dataset.lang;
     if (!choice || !LANGS.includes(choice) || choice === currentLang()) return;
@@ -989,6 +1008,13 @@ function drawMark() {
   wireSettings();
   wireTour();
   paintTour();
+  let answers = "keep";
+  try {
+    answers = localStorage.getItem(ANSWER_KEY) || "keep";
+  } catch {
+    answers = "keep";
+  }
+  paintSegment($("answerSeg"), answers, "answer");
   paintSegment($("langSeg"), currentLang(), "lang");
   paintSegment($("themeSeg"), currentTheme(), "themeSet");
 
