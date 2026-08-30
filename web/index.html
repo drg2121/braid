@@ -249,8 +249,13 @@
   summary{cursor:pointer;padding:.95rem 0;font-size:.84rem;font-weight:600;
     color:var(--ink-2);list-style:none}
   summary::-webkit-details-marker{display:none}
-  summary::after{content:" +";color:var(--ink-3)}
-  details[open] summary::after{content:" \2013"}
+  summary{display:flex;align-items:center;gap:.5rem}
+  summary::after{content:"";flex:none;margin-left:auto;width:7px;height:7px;
+    border-right:1.8px solid var(--ink-3);border-bottom:1.8px solid var(--ink-3);
+    transform:rotate(45deg) translate(-2px,-2px);
+    transition:transform .25s var(--ease)}
+  details[open]>summary::after{transform:rotate(-135deg) translate(-2px,-2px)}
+  summary .gear{width:16px;height:16px;flex:none;color:var(--ink-3)}
   pre{background:var(--surface);border:1px solid var(--rule);border-radius:12px;
     padding:.85rem;overflow-x:auto;font-size:.72rem;line-height:1.5;margin:.4rem 0 1rem;
     -webkit-overflow-scrolling:touch}
@@ -356,10 +361,18 @@
     </ol>
 
     <p class="note-line"><strong data-i18n="warn.restore"></strong><span data-i18n="warn.restoreRest"></span></p>
-    <p class="fine" id="installHint" hidden></p>
+    <p class="fine" id="installHint" hidden><button class="link" id="installOpen"></button></p>
 
     <details>
-      <summary data-i18n="set.title">Settings</summary>
+      <summary>
+        <svg class="gear" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
+             aria-hidden="true">
+          <circle cx="12" cy="12" r="3.1"/>
+          <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.56V21a2 2 0 1 1-4 0v-.11a1.7 1.7 0 0 0-1.11-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1H3a2 2 0 1 1 0-4h.11a1.7 1.7 0 0 0 1.55-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H9a1.7 1.7 0 0 0 1-1.56V3a2 2 0 1 1 4 0v.11a1.7 1.7 0 0 0 1 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9a1.7 1.7 0 0 0 1.56 1H21a2 2 0 1 1 0 4h-.11a1.7 1.7 0 0 0-1.49 1Z"/>
+        </svg>
+        <span data-i18n="set.title">Settings</span>
+      </summary>
       <div class="field">
         <label for="inputFields" data-i18n="set.answers"></label>
         <select id="inputFields">
@@ -427,7 +440,7 @@
     <div class="stage" id="tourStage"></div>
 
     <div class="sheet-body">
-      <p class="dots" id="tourDots"><i class="on"></i><i></i><i></i><i></i></p>
+      <p class="dots" id="tourDots"><i class="on"></i><i></i><i></i><i></i><i></i></p>
       <h2 id="tourTitle"></h2>
       <p id="tourText"></p>
     </div>
@@ -548,6 +561,39 @@
                dur="3.4s" repeatCount="indefinite"/>
     </g>
   </svg>
+  <!-- 5 - keeping it on the home screen, where it behaves like an app -->
+  <svg viewBox="0 0 260 150" fill="none" aria-hidden="true" data-step="5">
+    <g stroke="currentColor" stroke-width="3.5" stroke-linecap="round"
+       stroke-linejoin="round">
+      <rect x="30" y="20" width="62" height="110" rx="10"/>
+      <g>
+        <path d="M61 62V44"/><path d="M54 51l7-7 7 7"/>
+        <rect x="49" y="62" width="24" height="22" rx="4"/>
+      </g>
+    </g>
+    <circle cx="61" cy="58" r="10" fill="none" stroke="currentColor"
+            stroke-width="2.5" opacity="0">
+      <animate attributeName="r" values="5;16" dur="2.2s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0;.5;0" dur="2.2s"
+               repeatCount="indefinite"/>
+    </circle>
+    <g stroke="currentColor" stroke-width="3" opacity=".22">
+      <rect x="150" y="34" width="26" height="26" rx="8"/>
+      <rect x="188" y="34" width="26" height="26" rx="8"/>
+      <rect x="150" y="72" width="26" height="26" rx="8"/>
+      <rect x="188" y="110" width="26" height="26" rx="8"/>
+      <rect x="150" y="110" width="26" height="26" rx="8"/>
+    </g>
+    <g opacity="0">
+      <rect x="188" y="72" width="26" height="26" rx="8" fill="currentColor"/>
+      <animateTransform attributeName="transform" type="translate"
+        values="-120 -12;0 0;0 0;-120 -12" keyTimes="0;.42;.84;1" dur="3.6s"
+        repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.42;.84;1"
+               dur="3.6s" repeatCount="indefinite"/>
+    </g>
+  </svg>
+
 </template>
 
 <script src="./vendor/sql-wasm.js"></script>

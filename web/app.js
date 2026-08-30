@@ -705,14 +705,16 @@ $("removePerson").addEventListener("click", async () => {
  * Whether it also works offline depends on the service worker having
  * registered, so that half of the sentence is only said when it is true.
  */
-function showInstallHint(worksOffline) {
+function showInstallHint() {
   const standalone =
     window.matchMedia?.("(display-mode: standalone)").matches ||
     window.navigator.standalone === true;
-  if (standalone || location.protocol === "file:") return;
-
-  const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-  $("installHint").textContent = iOS ? t("install.ios") : t("install.other");
+  // Already installed, or opened as a single file: nothing to install.
+  if (standalone || location.protocol === "file:") {
+    $("installHint").hidden = true;
+    return;
+  }
+  $("installOpen").textContent = t("install.link");
   $("installHint").hidden = false;
 }
 
@@ -802,7 +804,7 @@ function watchSections() {
 // ---- the tutorial ---------------------------------------------------------
 
 const TOUR_SEEN = "braid.tour";
-const TOUR_STEPS = 4;
+const TOUR_STEPS = 5;
 let tourAt = 0;
 
 /** Draw the current tutorial step, art and words together. */
@@ -811,8 +813,10 @@ function paintTour() {
   const stage = $("tourStage");
   stage.replaceChildren(art.cloneNode(true));
 
+  const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   $("tourTitle").textContent = t(`tour.${tourAt + 1}.h`);
-  $("tourText").textContent = t(`tour.${tourAt + 1}.p`);
+  $("tourText").textContent =
+    tourAt === 4 && !iOS ? t("tour.5.p.other") : t(`tour.${tourAt + 1}.p`);
   $("tourNext").textContent =
     tourAt === TOUR_STEPS - 1 ? t("tour.done") : t("tour.next");
   $("tourBack").textContent = tourAt === 0 ? t("tour.skip") : t("tour.back");
@@ -842,6 +846,7 @@ function closeTour() {
 
 function wireTour() {
   $("tourOpen").addEventListener("click", () => openTour(0));
+  $("installOpen").addEventListener("click", () => openTour(TOUR_STEPS - 1));
   $("tourNext").addEventListener("click", () => {
     if (tourAt === TOUR_STEPS - 1) closeTour();
     else {
@@ -895,7 +900,7 @@ async function retranslate() {
   await renderLibrary();
   await showStorageNote();
   setPrivacyLine(offlineReady);
-  showInstallHint(offlineReady);
+  showInstallHint();
   paintTour();
   paintSegment($("langSeg"), currentLang(), "lang");
   paintSegment($("themeSeg"), currentTheme(), "themeSet");
@@ -949,6 +954,6 @@ function drawMark() {
 
   offlineReady = await registerWorker();
   setPrivacyLine(offlineReady);
-  showInstallHint(offlineReady);
+  showInstallHint();
   offerTourOnce();
 })();

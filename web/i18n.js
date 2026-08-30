@@ -11,6 +11,10 @@ export const THEMES = ["auto", "light", "dark"];
 
 const STRINGS = {
   ro: {
+    "tour.5.h": "Ține-o la îndemână",
+    "tour.5.p": "Pe iPhone sau iPad: apasă butonul de Distribuire, apoi „Adaugă pe ecranul principal”. Se deschide ca o aplicație și merge și fără internet.",
+    "tour.5.p.other": "Din meniul browserului, alege să instalezi pagina. Se deschide ca o aplicație și merge și fără internet.",
+    "install.link": "Cum o pun pe ecran?",
     "tour.open": "Arată-mi cum",
     "tour.skip": "Sari peste",
     "tour.next": "Mai departe",
@@ -120,6 +124,10 @@ const STRINGS = {
   },
 
   en: {
+    "tour.5.h": "Keep it to hand",
+    "tour.5.p": "On an iPhone or iPad: tap the Share button, then Add to Home Screen. It opens like an app and works with no internet.",
+    "tour.5.p.other": "From your browser's menu, choose to install the page. It opens like an app and works with no internet.",
+    "install.link": "How do I put it on my screen?",
     "tour.open": "Show me how",
     "tour.skip": "Skip",
     "tour.next": "Next",
@@ -229,8 +237,22 @@ const STRINGS = {
   },
 };
 
-let lang = read(STORE_LANG, "ro");
-if (!LANGS.includes(lang)) lang = "ro";
+/**
+ * Romanian for a Romanian phone, English for everything else.
+ *
+ * Only consulted when nobody has chosen: an explicit pick is remembered and
+ * outranks whatever the device says.
+ */
+function preferredLang() {
+  // Only the top preference counts. A phone set to English commonly lists
+  // Romanian further down as a fallback, and treating that as a vote for
+  // Romanian would hand an English speaker a Romanian page.
+  const top = navigator.languages?.[0] || navigator.language || "";
+  return String(top).toLowerCase().startsWith("ro") ? "ro" : "en";
+}
+
+let lang = read(STORE_LANG, "");
+if (!LANGS.includes(lang)) lang = preferredLang();
 
 function read(key, fallback) {
   try {
@@ -254,6 +276,7 @@ export function currentLang() {
 
 export function setLang(next) {
   if (!LANGS.includes(next)) return;
+  // Writing it makes the choice stick, so the device is not asked again.
   lang = next;
   write(STORE_LANG, next);
   document.documentElement.lang = next;
