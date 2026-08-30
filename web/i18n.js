@@ -12,8 +12,13 @@ export const THEMES = ["auto", "light", "dark"];
 const STRINGS = {
   ro: {
     "tour.5.h": "Ține-o la îndemână",
-    "tour.5.p": "Pe iPhone sau iPad: apasă butonul de Distribuire, apoi „Adaugă pe ecranul principal”. Se deschide ca o aplicație și merge și fără internet.",
-    "tour.5.p.other": "Din meniul browserului, alege să instalezi pagina. Se deschide ca o aplicație și merge și fără internet.",
+    "install.ios-safari": "Apasă butonul de Distribuire din bara de jos, derulează și alege „Adaugă pe ecranul principal”.",
+    "install.ios-chrome": "Apasă butonul de Distribuire din dreapta sus, derulează și alege „Adaugă pe ecranul principal”.",
+    "install.ios-other": "Browserul acesta nu poate adăuga pagini pe ecranul principal. Deschide adresa în Safari și încearcă acolo.",
+    "install.android": "Apasă cele trei puncte din dreapta sus și alege „Instalează aplicația” sau „Adaugă pe ecranul principal”.",
+    "install.desktop-safari": "Din meniul Fișier, alege „Adaugă în Dock”.",
+    "install.desktop": "Apasă pictograma de instalare din bara de adrese, sau caută „Instalează” în meniul browserului.",
+    "install.after": "Apoi se deschide ca o aplicație și merge și fără internet.",
     "install.link": "Cum o pun pe ecran?",
     "tour.open": "Arată-mi cum",
     "tour.skip": "Sari peste",
@@ -110,8 +115,6 @@ const STRINGS = {
     "storage.mayClear": "Browserul le poate șterge dacă rămâne fără spațiu, deci salvează și fișierul.",
     "storage.broken": "Browserul nu poate păstra nimic ({reason}), deci va trebui să adaugi copii de pe fiecare dispozitiv de fiecare dată. Combinarea funcționează în continuare.",
 
-    "install.ios": "Distribuie ▸ Adaugă pe ecranul principal, și se deschide ca o aplicație.",
-    "install.other": "Instaleaz-o din meniul browserului, și se deschide ca o aplicație.",
 
     "confirm.forget": "Uiți biblioteca păstrată pentru {name}? Copiile de pe dispozitive și fișierele salvate rămân neatinse.",
     "confirm.removePerson": "Ștergi {name} și biblioteca păstrată pentru el? Copiile de pe dispozitive rămân neatinse.",
@@ -125,8 +128,13 @@ const STRINGS = {
 
   en: {
     "tour.5.h": "Keep it to hand",
-    "tour.5.p": "On an iPhone or iPad: tap the Share button, then Add to Home Screen. It opens like an app and works with no internet.",
-    "tour.5.p.other": "From your browser's menu, choose to install the page. It opens like an app and works with no internet.",
+    "install.ios-safari": "Tap the Share button in the bottom bar, scroll down, and choose Add to Home Screen.",
+    "install.ios-chrome": "Tap the Share button at the top right, scroll down, and choose Add to Home Screen.",
+    "install.ios-other": "This browser cannot add pages to the home screen. Open the address in Safari and try there.",
+    "install.android": "Tap the three dots at the top right and choose Install app, or Add to Home screen.",
+    "install.desktop-safari": "From the File menu, choose Add to Dock.",
+    "install.desktop": "Click the install icon in the address bar, or look for Install in your browser's menu.",
+    "install.after": "It then opens like an app and works with no internet.",
     "install.link": "How do I put it on my screen?",
     "tour.open": "Show me how",
     "tour.skip": "Skip",
@@ -223,8 +231,6 @@ const STRINGS = {
     "storage.mayClear": "The browser may clear it if the device runs low on space, so keep the file saved too.",
     "storage.broken": "This browser cannot remember anything ({reason}), so you will need to add a backup from every device each time. Combining still works.",
 
-    "install.ios": "Share ▸ Add to Home Screen, and it opens like an app.",
-    "install.other": "Install it from your browser menu, and it opens like an app.",
 
     "confirm.forget": "Forget the library remembered for {name}? Your device backups and any saved file are untouched.",
     "confirm.removePerson": "Remove {name} and the library remembered for them? Their device backups are untouched.",

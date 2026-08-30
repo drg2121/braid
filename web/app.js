@@ -804,19 +804,64 @@ function watchSections() {
 // ---- the tutorial ---------------------------------------------------------
 
 const TOUR_SEEN = "braid.tour";
+
+/**
+ * Which set of install instructions applies here.
+ *
+ * The control to press is different on every combination, and "look in the
+ * menu" helps nobody, so the tutorial names and draws the real one. On iOS
+ * every browser is WebKit underneath; what differs is where the Share button
+ * sits, and whether the browser offers the option at all.
+ */
+function installPlatform() {
+  const ua = navigator.userAgent;
+
+  // Android first: its user agent is unambiguous, and checking it before the
+  // iPadOS heuristic keeps that heuristic from claiming an Android phone.
+  if (/Android/.test(ua)) return "android";
+
+  // iPadOS reports itself as a Mac and is told apart by having a touchscreen.
+  // The Macintosh string has to come from the user agent rather than
+  // navigator.platform, which still says MacIntel on a Mac emulating a phone
+  // and would make every emulated device look like an iPad.
+  const iPadOS = /Macintosh/.test(ua) && navigator.maxTouchPoints > 1;
+  const iOS = /iPad|iPhone|iPod/.test(ua) || iPadOS;
+
+  if (iOS) {
+    if (/CriOS/.test(ua)) return "ios-chrome";
+    if (/FxiOS|EdgiOS|OPiOS/.test(ua)) return "ios-other";
+    return "ios-safari";
+  }
+  if (/Safari/.test(ua) && !/Chrome|Chromium|Edg|OPR/.test(ua)) return "desktop-safari";
+  return "desktop";
+}
+
+/** The drawing that matches a platform; several share one. */
+function installArtKey(platform) {
+  if (platform === "ios-safari" || platform === "ios-other") return "ios-safari";
+  if (platform === "ios-chrome") return "ios-chrome";
+  if (platform === "android") return "android";
+  return "desktop";
+}
 const TOUR_STEPS = 5;
 let tourAt = 0;
 
 /** Draw the current tutorial step, art and words together. */
 function paintTour() {
-  const art = $("tourArt").content.children[tourAt];
-  const stage = $("tourStage");
-  stage.replaceChildren(art.cloneNode(true));
+  const template = $("tourArt").content;
+  const platform = installPlatform();
+  const last = tourAt === TOUR_STEPS - 1;
 
-  const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  // The final step is drawn for the device it is being read on.
+  const art = last
+    ? template.querySelector(`[data-install="${installArtKey(platform)}"]`)
+    : template.children[tourAt];
+  $("tourStage").replaceChildren(art.cloneNode(true));
+
   $("tourTitle").textContent = t(`tour.${tourAt + 1}.h`);
-  $("tourText").textContent =
-    tourAt === 4 && !iOS ? t("tour.5.p.other") : t(`tour.${tourAt + 1}.p`);
+  $("tourText").textContent = last
+    ? `${t(`install.${platform}`)} ${platform === "ios-other" ? "" : t("install.after")}`.trim()
+    : t(`tour.${tourAt + 1}.p`);
   $("tourNext").textContent =
     tourAt === TOUR_STEPS - 1 ? t("tour.done") : t("tour.next");
   $("tourBack").textContent = tourAt === 0 ? t("tour.skip") : t("tour.back");

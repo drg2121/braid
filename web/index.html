@@ -281,6 +281,10 @@
   .note-line strong{color:var(--ink-2);font-weight:640}
   .sub{margin:1.5rem 0 0;font-size:.95rem;font-weight:620;letter-spacing:-.015em}
   .fine{color:var(--ink-3);font-size:.84rem;margin:.9rem 0 0}
+  .credit{margin:1.6rem 0 .2rem;padding-top:1rem;border-top:1px solid var(--rule-2);
+    color:var(--ink-3);font-size:.8rem}
+  .credit a{color:var(--ink-2);text-decoration:none;font-weight:600;
+    white-space:nowrap}
   .fine strong{color:var(--ink-2);font-weight:620}
   [hidden]{display:none!important}
 </style>
@@ -403,6 +407,8 @@
         <button class="ghost" id="forget" data-i18n="btn.forget"></button>
       </div>
       <p class="fine" id="storageNote"></p>
+      <p class="credit">Powered by Draghici Cosmin
+        <a href="tel:+40753675139">0753&nbsp;675&nbsp;139</a></p>
     </details>
   </section>
 </div>
@@ -561,36 +567,134 @@
                dur="3.4s" repeatCount="indefinite"/>
     </g>
   </svg>
-  <!-- 5 - keeping it on the home screen, where it behaves like an app -->
-  <svg viewBox="0 0 260 150" fill="none" aria-hidden="true" data-step="5">
+  <!-- 5 - installing, drawn per platform so the control shown is the real one.
+       The tour picks by data-install; each ends with the icon reaching a home
+       screen, because that is what "installed" looks like. -->
+  <svg viewBox="0 0 260 150" fill="none" aria-hidden="true" data-install="ios-safari">
     <g stroke="currentColor" stroke-width="3.5" stroke-linecap="round"
        stroke-linejoin="round">
-      <rect x="30" y="20" width="62" height="110" rx="10"/>
+      <rect x="24" y="16" width="72" height="118" rx="12"/>
+      <path d="M24 112h72" opacity=".3"/>
       <g>
-        <path d="M61 62V44"/><path d="M54 51l7-7 7 7"/>
-        <rect x="49" y="62" width="24" height="22" rx="4"/>
+        <path d="M46 128v-14"/><path d="M41 119l5-5 5 5"/>
+        <rect x="38" y="128" width="16" height="2" rx="1" opacity="0"/>
       </g>
+      <path d="M70 122h10" opacity=".3"/>
     </g>
-    <circle cx="61" cy="58" r="10" fill="none" stroke="currentColor"
+    <circle cx="46" cy="122" r="10" fill="none" stroke="currentColor"
             stroke-width="2.5" opacity="0">
-      <animate attributeName="r" values="5;16" dur="2.2s" repeatCount="indefinite"/>
-      <animate attributeName="opacity" values="0;.5;0" dur="2.2s"
-               repeatCount="indefinite"/>
+      <animate attributeName="r" values="5;18" dur="2.2s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0;.5;0" dur="2.2s" repeatCount="indefinite"/>
     </circle>
-    <g stroke="currentColor" stroke-width="3" opacity=".22">
-      <rect x="150" y="34" width="26" height="26" rx="8"/>
-      <rect x="188" y="34" width="26" height="26" rx="8"/>
-      <rect x="150" y="72" width="26" height="26" rx="8"/>
-      <rect x="188" y="110" width="26" height="26" rx="8"/>
-      <rect x="150" y="110" width="26" height="26" rx="8"/>
+    <g stroke="currentColor" stroke-width="3" opacity=".2">
+      <rect x="152" y="30" width="26" height="26" rx="8"/>
+      <rect x="190" y="30" width="26" height="26" rx="8"/>
+      <rect x="152" y="68" width="26" height="26" rx="8"/>
+      <rect x="152" y="106" width="26" height="26" rx="8"/>
+      <rect x="190" y="106" width="26" height="26" rx="8"/>
     </g>
     <g opacity="0">
-      <rect x="188" y="72" width="26" height="26" rx="8" fill="currentColor"/>
+      <rect x="190" y="68" width="26" height="26" rx="8" fill="currentColor"/>
       <animateTransform attributeName="transform" type="translate"
-        values="-120 -12;0 0;0 0;-120 -12" keyTimes="0;.42;.84;1" dur="3.6s"
+        values="-146 52;0 0;0 0;-146 52" keyTimes="0;.44;.86;1" dur="3.8s"
         repeatCount="indefinite"/>
-      <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.42;.84;1"
-               dur="3.6s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.44;.86;1"
+               dur="3.8s" repeatCount="indefinite"/>
+    </g>
+  </svg>
+
+  <svg viewBox="0 0 260 150" fill="none" aria-hidden="true" data-install="ios-chrome">
+    <g stroke="currentColor" stroke-width="3.5" stroke-linecap="round"
+       stroke-linejoin="round">
+      <rect x="24" y="16" width="72" height="118" rx="12"/>
+      <path d="M24 40h72" opacity=".3"/>
+      <g>
+        <path d="M80 34V20"/><path d="M75 25l5-5 5 5"/>
+      </g>
+      <path d="M38 28h22" opacity=".3"/>
+    </g>
+    <circle cx="80" cy="28" r="10" fill="none" stroke="currentColor"
+            stroke-width="2.5" opacity="0">
+      <animate attributeName="r" values="5;18" dur="2.2s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0;.5;0" dur="2.2s" repeatCount="indefinite"/>
+    </circle>
+    <g stroke="currentColor" stroke-width="3" opacity=".2">
+      <rect x="152" y="30" width="26" height="26" rx="8"/>
+      <rect x="190" y="30" width="26" height="26" rx="8"/>
+      <rect x="152" y="68" width="26" height="26" rx="8"/>
+      <rect x="152" y="106" width="26" height="26" rx="8"/>
+      <rect x="190" y="106" width="26" height="26" rx="8"/>
+    </g>
+    <g opacity="0">
+      <rect x="190" y="68" width="26" height="26" rx="8" fill="currentColor"/>
+      <animateTransform attributeName="transform" type="translate"
+        values="-110 -42;0 0;0 0;-110 -42" keyTimes="0;.44;.86;1" dur="3.8s"
+        repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.44;.86;1"
+               dur="3.8s" repeatCount="indefinite"/>
+    </g>
+  </svg>
+
+  <svg viewBox="0 0 260 150" fill="none" aria-hidden="true" data-install="android">
+    <g stroke="currentColor" stroke-width="3.5" stroke-linecap="round"
+       stroke-linejoin="round">
+      <rect x="24" y="16" width="72" height="118" rx="12"/>
+      <path d="M24 40h72" opacity=".3"/>
+      <path d="M38 28h26" opacity=".3"/>
+    </g>
+    <g fill="currentColor">
+      <circle cx="82" cy="22" r="2.6"/><circle cx="82" cy="28" r="2.6"/>
+      <circle cx="82" cy="34" r="2.6"/>
+    </g>
+    <circle cx="82" cy="28" r="10" fill="none" stroke="currentColor"
+            stroke-width="2.5" opacity="0">
+      <animate attributeName="r" values="5;18" dur="2.2s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0;.5;0" dur="2.2s" repeatCount="indefinite"/>
+    </circle>
+    <g stroke="currentColor" stroke-width="3" opacity=".2">
+      <rect x="152" y="30" width="26" height="26" rx="8"/>
+      <rect x="190" y="30" width="26" height="26" rx="8"/>
+      <rect x="152" y="68" width="26" height="26" rx="8"/>
+      <rect x="152" y="106" width="26" height="26" rx="8"/>
+      <rect x="190" y="106" width="26" height="26" rx="8"/>
+    </g>
+    <g opacity="0">
+      <rect x="190" y="68" width="26" height="26" rx="8" fill="currentColor"/>
+      <animateTransform attributeName="transform" type="translate"
+        values="-110 -42;0 0;0 0;-110 -42" keyTimes="0;.44;.86;1" dur="3.8s"
+        repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.44;.86;1"
+               dur="3.8s" repeatCount="indefinite"/>
+    </g>
+  </svg>
+
+  <svg viewBox="0 0 260 150" fill="none" aria-hidden="true" data-install="desktop">
+    <g stroke="currentColor" stroke-width="3.5" stroke-linecap="round"
+       stroke-linejoin="round">
+      <rect x="26" y="26" width="150" height="98" rx="10"/>
+      <path d="M26 52h150" opacity=".3"/>
+      <rect x="40" y="36" width="104" height="10" rx="5" opacity=".3"/>
+      <g>
+        <path d="M156 35v9"/><path d="M152 40l4 4 4-4"/>
+        <path d="M151 47h10"/>
+      </g>
+    </g>
+    <circle cx="156" cy="40" r="9" fill="none" stroke="currentColor"
+            stroke-width="2.5" opacity="0">
+      <animate attributeName="r" values="5;16" dur="2.2s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0;.5;0" dur="2.2s" repeatCount="indefinite"/>
+    </circle>
+    <g stroke="currentColor" stroke-width="3" opacity=".2">
+      <rect x="196" y="86" width="24" height="24" rx="7"/>
+      <rect x="226" y="86" width="24" height="24" rx="7"/>
+    </g>
+    <g opacity="0">
+      <rect x="196" y="86" width="24" height="24" rx="7" fill="currentColor"/>
+      <animateTransform attributeName="transform" type="translate"
+        values="-40 -46;0 0;0 0;-40 -46" keyTimes="0;.44;.86;1" dur="3.8s"
+        repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.44;.86;1"
+               dur="3.8s" repeatCount="indefinite"/>
     </g>
   </svg>
 
