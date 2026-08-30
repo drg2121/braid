@@ -9,516 +9,328 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Braid">
-<meta name="description" content="Combine your JW Library backups from several devices into one. Runs entirely on your device; nothing is uploaded.">
+<meta name="description" content="One library on every device. Runs on your phone; nothing is uploaded.">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icon.svg">
 <title>Braid</title>
 <style>
   :root {
-    --paper:    #f7f6f3;
-    --surface:  #fffefc;
-    --ink:      #15141a;
-    --ink-2:    #57555f;
-    --ink-3:    #8b8993;
-    --rule:     #e5e2dc;
-    --rule-2:   #efece7;
-    --accent:   #5a3ec8;
-    --accent-ink: #ffffff;
-    --accent-wash: #efeafd;
-    --good:     #1c6b45;
-    --good-wash:#e6f2ec;
-    --warn:     #8a5310;
-    --warn-wash:#f7efe1;
-    --bad:      #a32a20;
-    --bad-wash: #f8eae8;
-
-    --step--1: 0.8125rem;
-    --step-0:  1rem;
-    --step-1:  1.0625rem;
-    --gap:     clamp(1.25rem, 5vw, 2rem);
-    --ease:    cubic-bezier(.22,.61,.36,1);
+    --paper:#f7f6f3; --surface:#fffefc;
+    --ink:#15141a; --ink-2:#57555f; --ink-3:#8b8993;
+    --rule:#e5e2dc; --rule-2:#efece7;
+    --accent:#5a3ec8; --accent-ink:#fff; --accent-soft:#efeafd;
+    --good:#1c6b45; --good-wash:#e6f2ec;
+    --warn:#8a5310; --warn-wash:#f7efe1;
+    --bad:#a32a20;  --bad-wash:#f8eae8;
+    --ease:cubic-bezier(.22,.61,.36,1);
+    --spring:cubic-bezier(.34,1.4,.64,1);
   }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --paper:    #0b0b0d;
-      --surface:  #141419;
-      --ink:      #f3f2ef;
-      --ink-2:    #a5a3ae;
-      --ink-3:    #6f6d79;
-      --rule:     #24242c;
-      --rule-2:   #1b1b21;
-      --accent:   #a78bff;
-      --accent-ink: #131020;
-      --accent-wash: #1c1830;
-      --good:     #7fd7a6; --good-wash:#12271b;
-      --warn:     #e5ab5e; --warn-wash:#2a2010;
-      --bad:      #f2938a; --bad-wash: #2b1715;
+  /* Follow the system unless the reader has pinned a choice. */
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+    --paper:#0b0b0d; --surface:#141419;
+    --ink:#f3f2ef; --ink-2:#a5a3ae; --ink-3:#6f6d79;
+    --rule:#24242c; --rule-2:#1b1b21;
+    --accent:#a78bff; --accent-ink:#131020; --accent-soft:#1c1830;
+    --good:#7fd7a6; --good-wash:#12271b;
+    --warn:#e5ab5e; --warn-wash:#2a2010;
+    --bad:#f2938a;  --bad-wash:#2b1715;
     }
   }
-
-  *, *::before, *::after { box-sizing: border-box; }
-  html { -webkit-text-size-adjust: 100%; }
-
-  body {
-    margin: 0;
-    min-height: 100dvh;
-    background: var(--paper);
-    color: var(--ink);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text",
-                 "Segoe UI", Roboto, Inter, system-ui, sans-serif;
-    font-size: var(--step-0);
-    line-height: 1.55;
-    -webkit-font-smoothing: antialiased;
-    -webkit-tap-highlight-color: transparent;
+  :root[data-theme="dark"]{
+    --paper:#0b0b0d; --surface:#141419;
+    --ink:#f3f2ef; --ink-2:#a5a3ae; --ink-3:#6f6d79;
+    --rule:#24242c; --rule-2:#1b1b21;
+    --accent:#a78bff; --accent-ink:#131020; --accent-soft:#1c1830;
+    --good:#7fd7a6; --good-wash:#12271b;
+    --warn:#e5ab5e; --warn-wash:#2a2010;
+    --bad:#f2938a;  --bad-wash:#2b1715;
   }
 
-  /* A little tooth on the paper. Costs nothing and stops large flat areas
-     from looking like unpainted canvas. */
-  body::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    z-index: 0;
-    opacity: .5;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.045'/%3E%3C/svg%3E");
+  *,*::before,*::after{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;min-height:100dvh;background:var(--paper);color:var(--ink);
+    font:1.0625rem/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI Variable Text",
+         "Segoe UI",Roboto,system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;
   }
-  @media (prefers-color-scheme: dark) { body::before { opacity: .8; } }
+  .wrap{width:min(100% - 2.4rem,44rem);margin-inline:auto;
+    padding:1.3rem 0 calc(7rem + env(safe-area-inset-bottom))}
 
-  .wrap {
-    position: relative;
-    z-index: 1;
-    width: min(100% - 2.4rem, 46rem);
-    margin-inline: auto;
-    padding-block: clamp(1.4rem, 4vw, 2.6rem) calc(4rem + env(safe-area-inset-bottom));
-  }
+  /* ---------- motion ---------- */
+  @keyframes up{from{opacity:0;transform:translateY(14px)}}
+  @keyframes pop{from{opacity:0;transform:scale(.95)}}
+  @keyframes slide{from{opacity:0;transform:translateX(-12px)}}
+  @keyframes shimmer{to{background-position:-200% 0}}
+  @keyframes joinA{from{transform:translate(-10px,-10px);opacity:0}}
+  @keyframes joinB{from{transform:translate(10px,10px);opacity:0}}
+  @keyframes fillIn{from{opacity:0;transform:scale(.6)}}
 
-  /* ---- masthead ---- */
+  .rise{animation:up .55s var(--ease) both}
+  .d1{animation-delay:.05s} .d2{animation-delay:.11s}
 
-  .masthead {
-    display: flex;
-    align-items: center;
-    gap: .7rem;
-    padding-bottom: 1.15rem;
-    border-bottom: 1px solid var(--rule);
-  }
-  .mark { width: 30px; height: 30px; color: var(--accent); flex: none; }
-  .mark svg { display: block; width: 100%; height: 100%; }
-  .wordmark {
-    margin: 0;
-    font-size: 1.28rem;
-    font-weight: 660;
-    letter-spacing: -.035em;
-  }
-  .masthead select { margin-left: auto; }
+  .watch{opacity:0;transform:translateY(18px);
+         transition:opacity .6s var(--ease),transform .6s var(--ease)}
+  .watch.seen{opacity:1;transform:none}
 
-  /* ---- hero ---- */
-
-  .hero { padding-block: clamp(2.2rem, 9vw, 3.6rem) clamp(1.8rem, 6vw, 2.6rem); }
-  .hero h2 {
-    margin: 0;
-    font-size: clamp(2.05rem, 8.4vw, 3.15rem);
-    line-height: 1.02;
-    letter-spacing: -.042em;
-    font-weight: 660;
-    text-wrap: balance;
-  }
-  .hero h2 em { font-style: normal; color: var(--accent); }
-  .hero p {
-    margin: 1.1rem 0 0;
-    max-width: 34ch;
-    color: var(--ink-2);
-    font-size: var(--step-1);
-  }
-  .seal {
-    display: inline-flex;
-    /* The label wraps to two lines on a narrow phone, so the dot lines up with
-       the first line rather than floating between them. */
-    align-items: flex-start;
-    gap: .5rem;
-    margin-top: 1.5rem;
-    padding: .42rem .8rem .42rem .6rem;
-    border: 1px solid var(--rule);
-    border-radius: 100px;
-    font-size: var(--step--1);
-    color: var(--ink-2);
-    background: var(--surface);
-  }
-  .seal::before {
-    content: "";
-    flex: none;
-    margin-top: .52em;
-    width: 6px; height: 6px; border-radius: 50%;
-    background: var(--good);
-    box-shadow: 0 0 0 3px var(--good-wash);
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none!important;transition:none!important}
+    .watch{opacity:1;transform:none}
   }
 
-  /* ---- sections ---- */
+  /* ---------- masthead ---------- */
+  .top{display:flex;align-items:center;gap:.6rem;margin-bottom:2.6rem}
+  .mark{width:32px;height:32px;color:var(--accent);flex:none}
+  .mark svg{display:block;width:100%;height:100%;overflow:visible}
+  .mark .sq-a{animation:joinA .8s var(--spring) both .15s}
+  .mark .sq-b{animation:joinB .8s var(--spring) both .15s}
+  .mark .sq-fill{animation:fillIn .5s var(--ease) both .75s;transform-origin:50px 50px}
+  h1{margin:0;font-size:1.32rem;font-weight:660;letter-spacing:-.035em}
+  .top select{margin-left:auto;width:auto;min-height:34px;
+    padding:.15rem 1.4rem .15rem .7rem;font-size:.82rem;border-radius:100px}
 
-  section { padding-block: clamp(1.6rem, 5vw, 2.2rem); border-top: 1px solid var(--rule); }
-  section:first-of-type { border-top: 0; }
+  /* ---------- hero ---------- */
+  .hero h2{margin:0;font-size:clamp(2.35rem,10.5vw,3.5rem);line-height:1;
+    letter-spacing:-.045em;font-weight:660}
+  .hero h2 em{font-style:normal;color:var(--accent)}
+  .pill{display:inline-flex;align-items:center;gap:.45rem;margin-top:1.15rem;
+    padding:.4rem .85rem;border:1px solid var(--rule);border-radius:100px;
+    font-size:.82rem;color:var(--ink-2);background:var(--surface)}
+  .pill::before{content:"";flex:none;width:6px;height:6px;border-radius:50%;
+    background:var(--good);box-shadow:0 0 0 3px var(--good-wash)}
 
-  .label {
-    margin: 0 0 1.1rem;
-    font-size: .6875rem;
-    font-weight: 600;
-    letter-spacing: .155em;
-    text-transform: uppercase;
-    color: var(--ink-3);
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: 1rem;
-  }
-  .label .side { letter-spacing: .02em; text-transform: none; font-weight: 500; }
+  /* ---------- sections ---------- */
+  section{margin-top:2.9rem}
+  .lbl{margin:0 0 1rem;font-size:.68rem;font-weight:600;letter-spacing:.15em;
+    text-transform:uppercase;color:var(--ink-3);
+    display:flex;justify-content:space-between;gap:1rem;align-items:baseline}
+  .lbl .side{letter-spacing:.02em;text-transform:none;font-weight:500}
 
-  /* ---- library figures ---- */
+  /* ---------- figures ---------- */
+  .figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(5.4rem,1fr));
+    gap:.3rem 1.2rem}
+  .fig b{display:block;font-size:clamp(1.7rem,6.6vw,2.15rem);font-weight:620;
+    letter-spacing:-.04em;line-height:1.15;font-variant-numeric:tabular-nums}
+  .fig span{color:var(--ink-3);font-size:.8rem}
 
-  .figures {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(6.2rem, 1fr));
-    gap: .1rem 1.4rem;
-    margin-bottom: 1.6rem;
-  }
-  .figure { padding-block: .5rem; }
-  .figure b {
-    display: block;
-    font-size: clamp(1.75rem, 6.2vw, 2.3rem);
-    font-weight: 620;
-    letter-spacing: -.04em;
-    line-height: 1.1;
-    font-variant-numeric: tabular-nums;
-  }
-  .figure span { color: var(--ink-3); font-size: var(--step--1); }
+  ul{list-style:none;padding:0;margin:0}
+  li.row{display:flex;gap:1rem;align-items:baseline;padding:.7rem 0;
+    border-top:1px solid var(--rule-2);animation:slide .4s var(--ease) both}
+  li.row:first-child{border-top:0}
+  .row .name{font-weight:550}
+  .row .meta{margin-left:auto;color:var(--ink-3);font-size:.82rem}
+  .row .drop{all:unset;cursor:pointer;color:var(--ink-3);font-size:1.2rem;
+    padding:.5rem .6rem;margin:-.5rem -.5rem -.5rem 0}
+  .grow{min-width:0}
 
-  ul { list-style: none; padding: 0; margin: 0; }
-  li.row {
-    display: flex;
-    gap: 1rem;
-    align-items: baseline;
-    padding-block: .8rem;
-    border-top: 1px solid var(--rule-2);
-  }
-  li.row:first-child { border-top: 0; }
-  .row .name { font-weight: 550; }
-  .row .meta { color: var(--ink-3); font-size: var(--step--1); margin-left: auto; text-align: right; }
-  .row .drop {
-    all: unset; cursor: pointer; color: var(--ink-3); font-size: 1.25rem;
-    line-height: 1; padding: 0 .2rem; margin-left: .4rem;
-  }
-  .row .drop:hover { color: var(--bad); }
-  .grow { min-width: 0; }
+  /* ---------- steps ---------- */
+  .steps{list-style:none;padding:0;margin:0}
+  .steps li{display:grid;grid-template-columns:1.5rem 1fr;gap:0 .9rem;
+    padding:1.05rem 0;border-top:1px solid var(--rule-2);
+    animation:up .5s var(--ease) both}
+  .steps li:first-child{border-top:0;padding-top:.1rem}
+  .steps li:nth-child(2){animation-delay:.07s}
+  .steps li:nth-child(3){animation-delay:.14s}
+  .num{font-variant-numeric:tabular-nums;font-weight:700;font-size:.82rem;
+    color:var(--accent);line-height:1.7}
+  .steps h3{margin:0 0 .12rem;font-size:1.02rem;font-weight:620;
+    letter-spacing:-.022em}
+  .steps p{margin:0;color:var(--ink-2);font-size:.92rem;line-height:1.45;
+    text-wrap:pretty}
 
-  /* ---- controls ---- */
+  /* ---------- controls ---------- */
+  button{font:inherit;cursor:pointer;border:0;border-radius:14px;width:100%;
+    min-height:54px;padding:.9rem 1.2rem;font-weight:600;letter-spacing:-.01em;
+    background:var(--accent);color:var(--accent-ink);white-space:nowrap;
+    transition:transform .18s var(--spring),opacity .18s var(--ease)}
+  button:active{transform:scale(.97)}
+  button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+  button:disabled{opacity:.4;cursor:default;transform:none}
+  button.lead{min-height:58px;font-size:1.05rem}
+  button.ghost{background:transparent;color:var(--ink);border:1px solid var(--rule)}
+  .pair{display:flex;gap:.5rem}
 
-  button {
-    font: inherit;
-    cursor: pointer;
-    border: 0;
-    border-radius: 13px;
-    width: 100%;
-    min-height: 52px;
-    padding: .9rem 1.3rem;
-    font-weight: 600;
-    letter-spacing: -.01em;
-    background: var(--accent);
-    color: var(--accent-ink);
-    transition: transform .16s var(--ease), opacity .16s var(--ease),
-                background-color .16s var(--ease);
-  }
-  button:hover { opacity: .92; }
-  button:active { transform: scale(.985); }
-  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
-  button:disabled { opacity: .4; cursor: default; transform: none; }
-  button.lead { min-height: 58px; font-size: 1.06rem; }
-  button.ghost {
-    background: transparent;
-    color: var(--ink);
-    border: 1px solid var(--rule);
-  }
-  button.ghost:hover { background: var(--surface); opacity: 1; }
-  button + button { margin-top: .55rem; }
-  .pair { display: flex; gap: .55rem; }
-  .pair > button { margin-top: 0; }
+  /* segmented choice, used for language and appearance */
+  .seg{display:inline-flex;border:1px solid var(--rule);border-radius:100px;
+    padding:2px;background:var(--surface);gap:2px}
+  .seg.wide{display:flex;width:100%;border-radius:12px}
+  .seg button{width:auto;min-height:32px;padding:.25rem .7rem;border-radius:100px;
+    background:transparent;color:var(--ink-3);font-size:.78rem;font-weight:600;
+    letter-spacing:.02em}
+  .seg.wide button{flex:1;min-height:44px;border-radius:9px;font-size:.86rem}
+  .seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+  .lang{margin-left:auto}
+  .top select ~ .lang{margin-left:.5rem}
+  select,input[type=text]{font:inherit;width:100%;min-height:52px;padding:.6rem .8rem;
+    border:1px solid var(--rule);border-radius:12px;background:var(--surface);
+    color:var(--ink);font-size:1rem}
+  input[type=file]{display:none}
+  .field{margin-bottom:.9rem}
+  .field>label{display:block;font-size:.84rem;font-weight:600;margin-bottom:.35rem}
 
-  select, input[type=text] {
-    font: inherit;
-    width: 100%;
-    min-height: 48px;
-    padding: .6rem .8rem;
-    border: 1px solid var(--rule);
-    border-radius: 11px;
-    background: var(--surface);
-    color: var(--ink);
-  }
-  .masthead select {
-    width: auto;
-    min-height: 36px;
-    padding: .2rem 1.6rem .2rem .6rem;
-    font-size: var(--step--1);
-    border-radius: 100px;
-  }
-  input[type=file] { display: none; }
+  /* ---------- feedback ---------- */
+  progress{width:100%;height:3px;margin-top:1rem;appearance:none;border:0;
+    background:var(--rule)}
+  progress::-webkit-progress-bar{background:var(--rule)}
+  progress::-webkit-progress-value{background:var(--accent)}
+  progress:indeterminate{
+    background:linear-gradient(90deg,var(--rule) 35%,var(--accent) 50%,var(--rule) 65%);
+    background-size:200% 100%;animation:shimmer 1.2s linear infinite}
+  .note{border-radius:14px;padding:1rem 1.1rem;margin-bottom:1rem;font-size:.95rem;
+    animation:pop .45s var(--spring) both}
+  .note strong{display:block;margin-bottom:.15rem;font-weight:650}
+  .note.ok{background:var(--good-wash);color:var(--good)}
+  .note.warn{background:var(--warn-wash);color:var(--warn)}
+  .note.err{background:var(--bad-wash);color:var(--bad)}
 
-  .field { margin-bottom: 1rem; }
-  .field > label {
-    display: block;
-    font-size: var(--step--1);
-    font-weight: 600;
-    margin-bottom: .4rem;
-  }
+  /* ---------- dock ---------- */
+  .dock{position:fixed;inset:auto 0 0 0;z-index:20;
+    padding:.7rem max(1.2rem,env(safe-area-inset-left))
+            calc(.7rem + env(safe-area-inset-bottom)) max(1.2rem,env(safe-area-inset-right));
+    background:color-mix(in srgb,var(--paper) 84%,transparent);
+    backdrop-filter:saturate(180%) blur(16px);
+    -webkit-backdrop-filter:saturate(180%) blur(16px);
+    border-top:1px solid var(--rule);animation:up .5s var(--ease) both .25s}
+  @supports not (backdrop-filter:blur(1px)){.dock{background:var(--paper)}}
+  .dock-in{width:min(100%,44rem);margin-inline:auto;display:flex;gap:.5rem}
+  #save:not([hidden]){flex:1 1 auto}
+  #save:not([hidden]) ~ #choose{flex:0 1 auto;width:auto;padding-inline:1rem;
+    background:transparent;color:var(--ink);border:1px solid var(--rule);
+    font-size:.85rem;font-weight:550}
 
-  /* ---- feedback ---- */
-
-  progress {
-    width: 100%; height: 3px; margin-top: 1rem;
-    appearance: none; border: 0; background: var(--rule);
-  }
-  progress::-webkit-progress-bar { background: var(--rule); }
-  progress::-webkit-progress-value { background: var(--accent); }
-
-  .note {
-    border-radius: 13px;
-    padding: 1rem 1.15rem;
-    margin-bottom: 1.1rem;
-    font-size: .95rem;
-    border: 1px solid transparent;
-    animation: rise .34s var(--ease) both;
-  }
-  .note strong { display: block; margin-bottom: .2rem; font-weight: 640; }
-  .note.ok   { background: var(--good-wash); color: var(--good); }
-  .note.warn { background: var(--warn-wash); color: var(--warn); }
-  .note.err  { background: var(--bad-wash);  color: var(--bad); }
-
-  @keyframes rise { from { opacity: 0; transform: translateY(6px); } }
-  #result:not([hidden]) { animation: rise .34s var(--ease) both; }
-  @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after { animation: none !important; transition: none !important; }
-  }
-
-  /* ---- steps ---- */
-
-  ol.steps { counter-reset: s; list-style: none; padding: 0; margin: 0; }
-  ol.steps li {
-    counter-increment: s;
-    position: relative;
-    padding: 0 0 1.15rem 2.5rem;
-  }
-  ol.steps li:last-child { padding-bottom: 0; }
-  ol.steps li::before {
-    content: counter(s);
-    position: absolute;
-    left: 0;
-    top: -.05rem;
-    width: 1.65rem;
-    font-variant-numeric: tabular-nums;
-    font-weight: 620;
-    color: var(--accent);
-  }
-
-  .fine { color: var(--ink-3); font-size: var(--step--1); margin: 1.1rem 0 0; }
-  .fine strong { color: var(--ink-2); font-weight: 620; }
-  .fine:first-child { margin-top: 0; }
-
-  details { border-top: 1px solid var(--rule); margin-top: 1.4rem; }
-  details > summary {
-    cursor: pointer;
-    padding: .9rem 0;
-    font-size: var(--step--1);
-    font-weight: 600;
-    color: var(--ink-2);
-    list-style: none;
-  }
-  details > summary::-webkit-details-marker { display: none; }
-  details > summary::after { content: " +"; color: var(--ink-3); }
-  details[open] > summary::after { content: " –"; }
-  details > summary:hover { color: var(--ink); }
-
-  pre {
-    background: var(--surface);
-    border: 1px solid var(--rule);
-    border-radius: 11px;
-    padding: .9rem;
-    overflow-x: auto;
-    font-size: .78rem;
-    line-height: 1.5;
-    margin: 0 0 1rem;
-    -webkit-overflow-scrolling: touch;
-  }
-  code {
-    background: var(--rule-2);
-    border-radius: 5px;
-    padding: .08rem .32rem;
-    font-size: .88em;
-  }
-
-  footer {
-    margin-top: 2.6rem;
-    padding-top: 1.2rem;
-    border-top: 1px solid var(--rule);
-    color: var(--ink-3);
-    font-size: var(--step--1);
-    display: flex;
-    justify-content: space-between;
-    gap: 1rem;
-    flex-wrap: wrap;
-  }
-  footer a { color: inherit; text-underline-offset: 3px; }
-
-  /* ---- docked action ---- */
-
-  .dock {
-    position: fixed;
-    inset: auto 0 0 0;
-    z-index: 20;
-    padding: .7rem max(1.2rem, env(safe-area-inset-left))
-             calc(.7rem + env(safe-area-inset-bottom))
-             max(1.2rem, env(safe-area-inset-right));
-    background: color-mix(in srgb, var(--paper) 86%, transparent);
-    backdrop-filter: saturate(180%) blur(14px);
-    -webkit-backdrop-filter: saturate(180%) blur(14px);
-    border-top: 1px solid var(--rule);
-  }
-  @supports not (backdrop-filter: blur(1px)) { .dock { background: var(--paper); } }
-  .dock-inner { width: min(100%, 46rem); margin-inline: auto; display: flex; gap: .55rem; }
-  .dock button { margin-top: 0; white-space: nowrap; }
-  /* With a file to save, saving leads and choosing steps back -- and shrinks,
-     so the sentence that matters never breaks across two lines. */
-  #save:not([hidden]) { flex: 1 1 auto; }
-  #save:not([hidden]) ~ #choose {
-    flex: 0 1 auto;
-    width: auto;
-    padding-inline: 1.05rem;
-    background: transparent;
-    color: var(--ink);
-    border: 1px solid var(--rule);
-    font-size: var(--step--1);
-    font-weight: 550;
-  }
-  .wrap { padding-bottom: 8.5rem; }
-
-  /* ---- touch ---- */
-
-  @media (pointer: coarse) {
-    button { min-height: 54px; }
-    button.lead { min-height: 58px; }
-    .row .drop { padding: .5rem .7rem; margin: -.5rem -.4rem -.5rem 0; }
-    select, input[type=text] { min-height: 52px; }
-    /* 16px keeps iOS from zooming when a field takes focus. */
-    select, input[type=text] { font-size: 1rem; }
-    details > summary { padding-block: 1rem; }
-  }
-  @media (max-width: 26rem) {
-    :root { --step-0: 1.0625rem; --step-1: 1.09rem; }
-  }
-
-  [hidden] { display: none !important; }
+  /* ---------- small print ---------- */
+  details{border-top:1px solid var(--rule);margin-top:1.5rem}
+  summary{cursor:pointer;padding:.95rem 0;font-size:.84rem;font-weight:600;
+    color:var(--ink-2);list-style:none}
+  summary::-webkit-details-marker{display:none}
+  summary::after{content:" +";color:var(--ink-3)}
+  details[open] summary::after{content:" \2013"}
+  pre{background:var(--surface);border:1px solid var(--rule);border-radius:12px;
+    padding:.85rem;overflow-x:auto;font-size:.76rem;line-height:1.5;margin:0 0 1rem}
+  .note-line{margin:1.7rem 0 0;padding:0 0 0 .9rem;
+    border-left:2px solid var(--rule);color:var(--ink-3);
+    font-size:.86rem;line-height:1.5}
+  .note-line strong{color:var(--ink-2);font-weight:640}
+  .fine{color:var(--ink-3);font-size:.84rem;margin:.9rem 0 0}
+  .fine strong{color:var(--ink-2);font-weight:620}
+  [hidden]{display:none!important}
 </style>
 </head>
 <body>
 <div class="wrap">
 
-  <div class="masthead">
+  <div class="top rise">
     <span class="mark" id="mark" aria-hidden="true"></span>
-    <h1 class="wordmark">Braid</h1>
+    <h1>Braid</h1>
     <select id="person" aria-label="Whose library" hidden></select>
+    <div class="seg lang" id="langSeg" role="group" aria-label="Language">
+      <button type="button" data-lang="ro">RO</button>
+      <button type="button" data-lang="en">EN</button>
+    </div>
   </div>
 
   <div class="hero">
-    <h2>Every device. <em>One library.</em></h2>
-    <p>Your notes, highlights, bookmarks and playlists, combined from every
-    device you study on — with nothing left behind.</p>
-    <span class="seal" id="privacy">Runs on this device. Nothing is uploaded.</span>
+    <h2 class="rise d1"><span data-i18n="hero.a">Every device.</span><br><em data-i18n="hero.b">One library.</em></h2>
+    <span class="pill rise d2" id="privacy">Stays on your phone</span>
   </div>
 
-  <section id="libraryCard" hidden>
-    <p class="label">Your library <span class="side" id="libraryUpdated"></span></p>
-    <div class="figures" id="librarySummary"></div>
-    <ul id="devices"></ul>
+  <section id="libraryCard" class="watch" hidden>
+    <p class="lbl"><span data-i18n="lbl.library">Your library</span><span class="side" id="libraryUpdated"></span></p>
+    <div class="figs" id="librarySummary"></div>
+    <ul id="devices" style="margin-top:1.1rem"></ul>
   </section>
 
-  <section>
-    <p class="label">Add a backup</p>
-    <p class="fine" id="empty" style="margin-bottom:1.2rem">The first time, add one
-    from every device. After that, only the device you actually used.</p>
+  <section id="picked" class="watch" hidden>
+    <p class="lbl" data-i18n="lbl.adding">Adding</p>
     <ul id="files"></ul>
     <input type="file" id="picker" multiple accept=".jwlibrary,.zip,application/zip">
-    <button class="ghost" id="merge" hidden>Combine now</button>
+    <button class="ghost" id="merge" hidden style="margin-top:1rem" data-i18n="btn.combineNow">Combine now</button>
     <progress id="progress" hidden></progress>
     <p class="fine" id="progressText" hidden></p>
   </section>
 
   <section id="result" hidden>
-    <p class="label">Result</p>
     <div id="resultBanner"></div>
-    <p class="fine" style="margin-top:0">Then on each device:
-    <strong>Personal Study ▸ ⤒ ▸ Restore Backup</strong>, and pick it.</p>
+    <p class="fine" style="margin-top:0" data-i18n="result.then"></p>
     <details>
-      <summary>What changed</summary>
+      <summary data-i18n="result.whatChanged">What changed</summary>
       <pre id="report"></pre>
     </details>
   </section>
 
-  <section>
-    <p class="label">How it works</p>
+  <section class="watch">
+    <p class="lbl" data-i18n="lbl.how">How it works</p>
     <ol class="steps">
-      <li>On a device where you made notes, open JW Library and go to
-      <strong>Personal Study ▸ ⤒ ▸ Create Backup</strong>. Save it to Files.</li>
-      <li>Come back here and add it. Combining starts on its own, and checks
-      itself when it finishes.</li>
-      <li>Save the result, then restore it on every device.</li>
+      <li>
+        <span class="num">1</span>
+        <div>
+          <h3 data-i18n="step1.h"></h3>
+          <p data-i18n="step1.p"></p>
+        </div>
+      </li>
+      <li>
+        <span class="num">2</span>
+        <div>
+          <h3 data-i18n="step2.h"></h3>
+          <p data-i18n="step2.p"></p>
+        </div>
+      </li>
+      <li>
+        <span class="num">3</span>
+        <div>
+          <h3 data-i18n="step3.h"></h3>
+          <p data-i18n="step3.p"></p>
+        </div>
+      </li>
     </ol>
+
+    <p class="note-line"><strong data-i18n="warn.restore"></strong><span data-i18n="warn.restoreRest"></span></p>
     <p class="fine" id="installHint" hidden></p>
-    <p class="fine"><strong>Restoring replaces</strong> what is on that device.
-    That is the point — the combined file has everything — but it is why you
-    restore the combined file and never one device's own backup. Keep your
-    original backups until you have checked that everything is there.</p>
 
     <details>
-      <summary>Settings</summary>
+      <summary data-i18n="set.title">Settings</summary>
       <div class="field">
-        <label for="inputFields">If a study answer differs between devices</label>
+        <label for="inputFields" data-i18n="set.answers"></label>
         <select id="inputFields">
-          <option value="keep">Keep the most recent answer</option>
-          <option value="overwrite">Take the other device's answer</option>
+          <option value="keep" data-i18n="set.keep"></option>
+          <option value="overwrite" data-i18n="set.overwrite"></option>
         </select>
       </div>
       <div class="field">
-        <label for="personName">Whose library this is</label>
+        <label data-i18n="set.theme"></label>
+        <div class="seg wide" id="themeSeg" role="group">
+          <button type="button" data-theme-set="auto" data-i18n="theme.auto"></button>
+          <button type="button" data-theme-set="light" data-i18n="theme.light"></button>
+          <button type="button" data-theme-set="dark" data-i18n="theme.dark"></button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="personName" data-i18n="set.whose"></label>
         <input type="text" id="personName" placeholder="Me">
       </div>
       <div class="pair">
-        <button class="ghost" id="addPerson">Add someone</button>
-        <button class="ghost" id="removePerson">Remove</button>
+        <button class="ghost" id="addPerson" data-i18n="btn.addPerson"></button>
+        <button class="ghost" id="removePerson" data-i18n="btn.remove"></button>
       </div>
-      <p class="fine">Each person keeps their own library and their own devices.
-      Useful on a shared tablet, or if you help someone else with theirs.</p>
-      <div class="pair" style="margin-top:1rem">
-        <button class="ghost" id="saveStored">Save stored file</button>
-        <button class="ghost" id="forget">Forget library</button>
+      <div class="pair" style="margin-top:.5rem">
+        <button class="ghost" id="saveStored" data-i18n="btn.saveStored"></button>
+        <button class="ghost" id="forget" data-i18n="btn.forget"></button>
       </div>
       <p class="fine" id="storageNote"></p>
     </details>
   </section>
-
-  <footer>
-    <span>Braid — open source, no account, no server.</span>
-    <a href="https://github.com/drg2121/braid">Source</a>
-  </footer>
 </div>
 
-<!-- The action that matters stays within reach of a thumb, whatever is on
-     screen. On a phone this is the difference between a page you scroll and a
-     tool you use. -->
-<div class="dock" id="dock">
-  <div class="dock-inner">
-    <button class="lead" id="save" hidden>Save the combined file</button>
-    <button class="lead" id="choose">Choose a backup</button>
+<div class="dock">
+  <div class="dock-in">
+    <button class="lead" id="save" hidden data-i18n="btn.save"></button>
+    <button class="lead" id="choose" data-i18n="btn.choose"></button>
   </div>
 </div>
 
-<!-- The mark is inlined so it takes the accent colour in both themes. -->
+<!-- Inlined so the mark takes the accent colour and can be animated. -->
 <template id="markSource">
   <svg viewBox="0 0 100 100" role="img" aria-label="Braid">
     <defs>
@@ -526,17 +338,18 @@
         <rect x="18" y="18" width="46" height="46" rx="14"/>
       </clipPath>
     </defs>
-    <g fill="none" stroke="currentColor" stroke-width="9">
+    <g class="sq-a" fill="none" stroke="currentColor" stroke-width="9">
       <rect x="18" y="18" width="46" height="46" rx="14"/>
+    </g>
+    <g class="sq-b" fill="none" stroke="currentColor" stroke-width="9">
       <rect x="36" y="36" width="46" height="46" rx="14"/>
     </g>
-    <g clip-path="url(#braid-overlap)">
+    <g class="sq-fill" clip-path="url(#braid-overlap)">
       <rect x="36" y="36" width="46" height="46" rx="14" fill="currentColor"/>
     </g>
   </svg>
 </template>
 
-<!-- sql.js ships as a classic script that defines window.initSqlJs. -->
 <script src="./vendor/sql-wasm.js"></script>
 <script type="module" src="./app.js"></script>
 </body>

@@ -10,7 +10,7 @@
 // else is served from the cache and refreshed quietly afterwards, because the
 // SQLite engine is most of the weight and it changes about never.
 
-const CACHE = "braid-v2";
+const CACHE = "braid-v3";
 
 const ASSETS = [
   "./",
@@ -20,6 +20,7 @@ const ASSETS = [
   "./merge.js",
   "./verify.js",
   "./store.js",
+  "./i18n.js",
   "./wal.js",
   "./icon.svg",
   "./manifest.webmanifest",

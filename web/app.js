@@ -15,18 +15,24 @@ import {
   requestPersistence,
   usage,
 } from "./store.js";
+import {
+  LANGS,
+  THEMES,
+  applyStatic,
+  applyTheme,
+  currentLang,
+  currentTheme,
+  formatDate,
+  setLang,
+  setTheme,
+  t,
+} from "./i18n.js";
 import { verify } from "./verify.js";
 
 const $ = (id) => document.getElementById(id);
 
 // Rows worth showing as a headline; the rest stay in the detailed report.
-const HEADLINE = [
-  ["UserMark", "highlights"],
-  ["Note", "notes"],
-  ["Bookmark", "bookmarks"],
-  ["Tag", "tags"],
-  ["PlaylistItem", "playlist items"],
-];
+const HEADLINE = ["UserMark", "Note", "Bookmark", "Tag", "PlaylistItem"];
 
 let SQL = null;
 let people = [];
@@ -34,6 +40,7 @@ let personId = null;
 let added = []; // BackupFile objects picked this visit
 let merged = null; // { blob, name }
 let storeBroken = false;
+let offlineReady = false;
 
 // -- helpers ---------------------------------------------------------------
 
@@ -59,15 +66,32 @@ function base64ToBytes(text) {
 
 const megabytes = (n) => `${(n / 1e6).toFixed(1)} MB`;
 
-function shortDate(iso) {
-  if (!iso) return "date unknown";
-  const parsed = new Date(iso);
-  if (Number.isNaN(parsed.getTime())) return iso;
-  return parsed.toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+const shortDate = formatDate;
+
+/**
+ * Run a number up to its value.
+ *
+ * Four thousand highlights arriving instantly reads as a static label; the
+ * same number climbing reads as work that was done. Skipped when the reader
+ * has asked for less motion, and for small numbers where it would only be
+ * fidget.
+ */
+function countUp(node, value) {
+  const still = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  if (still || value < 20) {
+    node.textContent = value.toLocaleString();
+    return;
+  }
+  const duration = 900;
+  const start = performance.now();
+  const step = (now) => {
+    const t = Math.min(1, (now - start) / duration);
+    // Ease out, so it arrives rather than stopping dead.
+    const eased = 1 - Math.pow(1 - t, 3);
+    node.textContent = Math.round(value * eased).toLocaleString();
+    if (t < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
 }
 
 function banner(target, kind, title, detail) {
@@ -105,13 +129,12 @@ async function loadPeople() {
     $("person").hidden = true;
     $("libraryCard").hidden = true;
     $("storageNote").textContent =
-      `This browser cannot remember anything (${error.message}), so you will` +
-      " need to add a backup from every device each time. Combining still works.";
+      t("storage.broken", { reason: error.message });
     return;
   }
 
   if (!people.length) {
-    people = [await createPerson("Me")];
+    people = [await createPerson(t("person.default"))];
   }
   const wanted = currentPersonId();
   personId = people.some((p) => p.id === wanted) ? wanted : people[0].id;
@@ -140,27 +163,28 @@ async function renderLibrary() {
   if (storeBroken) return;
   const stored = personId ? await getPerson(personId) : null;
   const has = Boolean(stored?.library);
-  $("libraryCard").hidden = !has;
+  reveal("libraryCard", has);
   if (!has) {
     updateMergeButton();
     return;
   }
 
-  $("libraryUpdated").textContent = `updated ${shortDate(stored.updated)}`;
+  $("libraryUpdated").textContent = t("lbl.updated", { date: shortDate(stored.updated) });
 
   const stats = $("librarySummary");
   stats.replaceChildren();
-  for (const [table, label] of HEADLINE) {
+  for (const table of HEADLINE) {
+    const label = t(`fig.${table}`);
     const n = stored.summary?.[table];
     if (!n) continue;
     const box = document.createElement("div");
-    box.className = "figure";
+    box.className = "fig";
     const b = document.createElement("b");
-    b.textContent = n.toLocaleString();
     const caption = document.createElement("span");
     caption.textContent = label;
     box.append(b, caption);
     stats.append(box);
+    countUp(b, n);
   }
 
   const list = $("devices");
@@ -185,9 +209,7 @@ async function renderLibrary() {
 function setPrivacyLine(worksOffline) {
   const offline =
     worksOffline || location.protocol === "file:" || window.BRAID_WASM_BASE64;
-  $("privacy").textContent = offline
-    ? "Runs on this device, with or without internet. Nothing is uploaded."
-    : "Runs on this device. Nothing is uploaded.";
+  $("privacy").textContent = offline ? t("pill.on") : t("pill.off");
 }
 
 async function showStorageNote() {
@@ -197,16 +219,13 @@ async function showStorageNote() {
   const parts = [];
   if (room && room.available) {
     parts.push(
-      `Remembering uses ${megabytes(room.used)} of the ` +
-        `${megabytes(room.available)} this browser allows.`
+      t("storage.usage", {
+        used: megabytes(room.used),
+        available: megabytes(room.available),
+      })
     );
   }
-  parts.push(
-    persisted
-      ? "This browser has agreed to keep it."
-      : "The browser may clear it if the device runs low on space, so keep the" +
-          " combined file saved in Files as well."
-  );
+  parts.push(persisted ? t("storage.kept") : t("storage.mayClear"));
   $("storageNote").textContent = parts.join(" ");
 }
 
@@ -242,7 +261,7 @@ function renderFiles() {
     list.append(li);
   }
 
-  $("empty").hidden = added.length > 0;
+  reveal("picked", added.length > 0);
   updateMergeButton();
 }
 
@@ -280,12 +299,12 @@ async function updateMergeButton() {
   // shortens rather than wrapping the primary action onto two lines.
   const beside = !$("save").hidden;
   $("choose").textContent = beside
-    ? "Add more"
+    ? t("btn.addShort")
     : added.length
-      ? "Add another backup"
+      ? t("btn.addAnother")
       : stored
-        ? "Add the new backup"
-        : "Choose a backup";
+        ? t("btn.addNew")
+        : t("btn.choose");
 }
 
 async function addFiles(fileList) {
@@ -302,7 +321,7 @@ async function addFiles(fileList) {
   }
   renderFiles();
   if (problems.length) {
-    say("err", "Some files could not be opened.", problems.join(" "));
+    say("err", t("result.badFiles"), problems.join(" "));
     return;
   }
 
@@ -378,7 +397,7 @@ async function doMerge() {
   progress.hidden = false;
   progress.removeAttribute("value");
   progressText.hidden = false;
-  progressText.textContent = "Reading your backups…";
+  progressText.textContent = t("progress.reading");
   $("result").hidden = true;
 
   try {
@@ -393,7 +412,7 @@ async function doMerge() {
       inputs.push(await BackupFile.open(file));
     }
     if (inputs.length < 2) {
-      throw new Error("add at least two backups, or one if a library is remembered");
+      throw new Error(t("err.needTwo"));
     }
 
     // The most recently made backup becomes the starting point.
@@ -415,7 +434,7 @@ async function doMerge() {
       },
     });
 
-    progressText.textContent = "Checking that nothing was lost…";
+    progressText.textContent = t("progress.checking");
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     const checkSources = [];
@@ -428,7 +447,7 @@ async function doMerge() {
     const check = verify(db, checkSources, new Set(mediaPlan.keys()));
     for (const source of checkSources) source.db.close();
 
-    progressText.textContent = "Writing the combined file…";
+    progressText.textContent = t("progress.writing");
     const manifest = JSON.parse(JSON.stringify(base.manifest));
     const stamp = new Date().toISOString().slice(0, 10);
     const name = `Combined library ${stamp}.jwlibrary`;
@@ -454,7 +473,7 @@ async function doMerge() {
     let remembered = false;
     let storeMessage = "";
     if (clean && !storeBroken && personId) {
-      progressText.textContent = "Remembering it for next time…";
+      progressText.textContent = t("progress.remembering");
       try {
         await rememberLibrary(personId, {
           blob: merged.blob,
@@ -467,7 +486,7 @@ async function doMerge() {
         });
         remembered = true;
       } catch (error) {
-        storeMessage = ` It could not be remembered for next time: ${error.message}`;
+        storeMessage = ` ${error.message}`;
       }
     }
 
@@ -476,23 +495,19 @@ async function doMerge() {
       const contributing = await storedDeviceCount(added);
       say(
         "ok",
-        "Done — everything is there.",
-        `Every note, highlight, bookmark, tag and playlist from ${contributing}` +
-          ` device${contributing === 1 ? "" : "s"} is in the combined file` +
-          ` (${megabytes(merged.blob.size)}).` +
-          (remembered ? " It is remembered, so next time add only what changed." : "") +
-          storeMessage,
+        t("result.okTitle"),
+        t("result.okBody", {
+          n: contributing,
+          size: megabytes(merged.blob.size),
+        }) + (remembered ? t("result.remembered") : "") + storeMessage,
         { showSave: true, reveal: true }
       );
     } else {
       const problems = report.integrityErrors.length + check.missing.length;
-      say(
-        "warn",
-        "Combined, but the check found problems.",
-        `${problems} item(s) could not be confirmed, so this was not remembered.` +
-          ` Open "What changed" below before you restore this anywhere.`,
-        { showSave: true, reveal: true }
-      );
+      say("warn", t("result.warnTitle"), t("result.warnBody", { n: problems }), {
+        showSave: true,
+        reveal: true,
+      });
     }
 
     added = [];
@@ -502,7 +517,7 @@ async function doMerge() {
   } catch (error) {
     merged = null;
     $("report").textContent = "";
-    say("err", "It did not work.", error.message);
+    say("err", t("result.errTitle"), error.message);
   } finally {
     progress.hidden = true;
     progressText.hidden = true;
@@ -546,11 +561,7 @@ $("saveStored").addEventListener("click", async () => {
 $("forget").addEventListener("click", async () => {
   const person = currentPerson();
   if (
-    !confirm(
-      `Forget the remembered library for ${person?.name || "this person"}?` +
-        " Your device backups and any file you have saved are untouched," +
-        " but next time you will have to add a backup from every device again."
-    )
+    !confirm(t("confirm.forget", { name: person?.name || "" }))
   ) {
     return;
   }
@@ -579,9 +590,9 @@ $("personName").addEventListener("change", async (event) => {
 });
 
 $("addPerson").addEventListener("click", async () => {
-  const name = prompt("Whose library is this?", "");
+  const name = prompt(t("prompt.newPerson"), "");
   if (name === null) return;
-  const person = await createPerson(name || "Someone");
+  const person = await createPerson(name || t("person.someone"));
   people = await listPeople();
   personId = person.id;
   rememberCurrentPerson(personId);
@@ -597,10 +608,7 @@ $("removePerson").addEventListener("click", async () => {
   const person = currentPerson();
   if (people.length < 2 || !person) return;
   if (
-    !confirm(
-      `Remove ${person.name} and the library remembered for them?` +
-        " Their device backups and any saved file are untouched."
-    )
+    !confirm(t("confirm.removePerson", { name: person.name }))
   ) {
     return;
   }
@@ -625,12 +633,7 @@ function showInstallHint(worksOffline) {
   if (standalone || location.protocol === "file:") return;
 
   const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-  const how = iOS
-    ? "tap the Share button, then Add to Home Screen"
-    : "install it from your browser's menu";
-  $("installHint").textContent =
-    `Keep this handy: ${how}. It then opens like an app` +
-    (worksOffline ? " and works without internet." : ".");
+  $("installHint").textContent = iOS ? t("install.ios") : t("install.other");
   $("installHint").hidden = false;
 }
 
@@ -652,6 +655,84 @@ async function registerWorker() {
   }
 }
 
+/**
+ * Reveal a section that JavaScript has just unhidden.
+ *
+ * A .watch section starts at zero opacity and is normally revealed by the
+ * observer below. That never fires for a section that was display:none when
+ * the page loaded, because it has no box to intersect -- so anything unhidden
+ * later has to be told directly, or it stays invisible forever.
+ */
+function reveal(id, show) {
+  const el = $(id);
+  if (!el) return;
+  el.hidden = !show;
+  if (show) requestAnimationFrame(() => el.classList.add("seen"));
+}
+
+/** Sections fade up as they come into view. */
+function watchSections() {
+  const targets = document.querySelectorAll(".watch");
+  if (!("IntersectionObserver" in window)) {
+    targets.forEach((el) => el.classList.add("seen"));
+    return;
+  }
+  const seer = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("seen");
+          seer.unobserve(entry.target);
+        }
+      }
+    },
+    { rootMargin: "0px 0px -12% 0px" }
+  );
+  targets.forEach((el) => seer.observe(el));
+}
+
+/** Mark the chosen option in a segmented control. */
+function paintSegment(group, value, attr) {
+  for (const button of group.querySelectorAll("button")) {
+    button.setAttribute("aria-pressed", String(button.dataset[attr] === value));
+  }
+}
+
+/** Redraw everything that carries words, after the language changes. */
+async function retranslate() {
+  applyStatic();
+  renderPeople();
+  renderFiles();
+  await renderLibrary();
+  await showStorageNote();
+  showInstallHint(offlineReady);
+  paintSegment($("langSeg"), currentLang(), "lang");
+  paintSegment($("themeSeg"), currentTheme(), "themeSet");
+}
+
+function wireSettings() {
+  $("langSeg").addEventListener("click", async (event) => {
+    const choice = event.target.closest("button")?.dataset.lang;
+    if (!choice || !LANGS.includes(choice) || choice === currentLang()) return;
+    setLang(choice);
+    await retranslate();
+  });
+
+  $("themeSeg").addEventListener("click", (event) => {
+    const choice = event.target.closest("button")?.dataset.themeSet;
+    if (!choice || !THEMES.includes(choice)) return;
+    setTheme(choice);
+    paintSegment($("themeSeg"), choice, "themeSet");
+  });
+
+  // With appearance left on automatic, follow the system when it changes.
+  window
+    .matchMedia?.("(prefers-color-scheme: dark)")
+    .addEventListener?.("change", () => {
+      if (currentTheme() === "auto") applyTheme();
+    });
+}
+
 /** The mark is inlined rather than an <img> so currentColor reaches it. */
 function drawMark() {
   const source = document.getElementById("markSource");
@@ -660,12 +741,20 @@ function drawMark() {
 }
 
 (async () => {
+  applyTheme();
+  applyStatic();
   drawMark();
+  watchSections();
+  wireSettings();
+  paintSegment($("langSeg"), currentLang(), "lang");
+  paintSegment($("themeSeg"), currentTheme(), "themeSet");
+
   await loadPeople();
   renderFiles();
   await renderLibrary();
   await showStorageNote();
-  const worksOffline = await registerWorker();
-  setPrivacyLine(worksOffline);
-  showInstallHint(worksOffline);
+
+  offlineReady = await registerWorker();
+  setPrivacyLine(offlineReady);
+  showInstallHint(offlineReady);
 })();

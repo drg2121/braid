@@ -18,7 +18,8 @@ from pathlib import Path
 HERE = Path(__file__).parent
 
 # Module order matters: each may only import from ones already inlined.
-MODULES = ["wal.js", "jwlibrary.js", "merge.js", "verify.js", "store.js", "app.js"]
+MODULES = ["wal.js", "jwlibrary.js", "merge.js", "verify.js", "store.js",
+           "i18n.js", "app.js"]
 
 # Inlined so the single file has no siblings to fetch.
 INLINE_ASSETS = ["icon.svg", "manifest.webmanifest"]
@@ -126,7 +127,10 @@ def build(out_path: Path) -> Path:
     html = html.replace('src="./icon.svg"', f'src="{icon_data}"')
     html = html.replace('href="./manifest.webmanifest"', f'href="{manifest_data}"')
 
-    marker_start = html.index("<!-- sql.js ships")
+    # Anchor on the script tag itself rather than a comment beside it: the
+    # comment is prose and gets rewritten, and the build should not break when
+    # someone edits it.
+    marker_start = html.index('<script src="./vendor/sql-wasm.js">')
     marker_end = html.index("</body>", marker_start)
     html = html[:marker_start] + replacement + "\n" + html[marker_end:]
 
