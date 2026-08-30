@@ -81,11 +81,12 @@ const STRINGS = {
     "result.badFiles": "Unele fișiere nu au putut fi folosite.",
     "err.notBackup": "„{name}” nu este o copie de rezervă JW Library. Alege fișierul salvat din Personal Study ▸ ⤒.",
 
-    "progress.reading": "Se citesc copiile…",
-    "progress.merging": "Se combină {name}",
-    "progress.checking": "Se verifică să nu se fi pierdut nimic…",
-    "progress.writing": "Se scrie fișierul combinat…",
-    "progress.remembering": "Se păstrează pentru data viitoare…",
+    "progress.reading": "Se citesc copiile",
+    "progress.stayOpen": "Ține pagina deschisă. La copii mari poate dura un minut.",
+    "progress.merging": "Se combină",
+    "progress.checking": "Se verifică",
+    "progress.writing": "Se scrie fișierul",
+    "progress.remembering": "Se păstrează",
 
     "report.from": "De pe {name}",
     "report.nothingNew": "Nimic nou — era deja tot aici.",
@@ -198,11 +199,12 @@ const STRINGS = {
     "result.badFiles": "Some files could not be used.",
     "err.notBackup": "\u201c{name}\u201d is not a JW Library backup. Choose the file you saved from Personal Study \u25b8 \u2913.",
 
-    "progress.reading": "Reading your backups…",
-    "progress.merging": "Merging {name}",
-    "progress.checking": "Checking that nothing was lost…",
-    "progress.writing": "Writing the combined file…",
-    "progress.remembering": "Remembering it for next time…",
+    "progress.reading": "Reading your backups",
+    "progress.stayOpen": "Keep this page open. Large backups can take a minute.",
+    "progress.merging": "Combining",
+    "progress.checking": "Checking",
+    "progress.writing": "Writing the file",
+    "progress.remembering": "Remembering",
 
     "report.from": "From {name}",
     "report.nothingNew": "Nothing new — it was all here already.",
@@ -287,7 +289,9 @@ export function setLang(next) {
   // Writing it makes the choice stick, so the device is not asked again.
   lang = next;
   write(STORE_LANG, next);
-  document.documentElement.lang = next;
+  // Guarded so choosing a language does not require a page: the rules below
+  // are ordinary logic and are worth being able to test without a browser.
+  if (typeof document !== "undefined") document.documentElement.lang = next;
 }
 
 /**
@@ -330,7 +334,7 @@ export function applyStatic(root = document) {
     const vars = el.dataset.i18nVars ? JSON.parse(el.dataset.i18nVars) : undefined;
     el.textContent = t(key, vars);
   }
-  document.documentElement.lang = lang;
+  if (typeof document !== "undefined") document.documentElement.lang = lang;
 }
 
 /** Dates in the reader's own language. */

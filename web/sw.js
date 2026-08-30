@@ -10,7 +10,7 @@
 // few kilobytes. Only the vendored SQLite engine is served from the cache
 // first, because it is most of the weight and changes about never.
 
-const CACHE = "braid-v4";
+const CACHE = "braid-v5";
 
 const ASSETS = [
   "./",

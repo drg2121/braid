@@ -89,10 +89,18 @@ const shortDate = formatDate;
  * has asked for less motion, and for small numbers where it would only be
  * fidget.
  */
-function countUp(node, value) {
+function countUp(node, value, label, key) {
+  // The noun has to climb with the number. Romanian changes it twice on the
+  // way up, so a label fixed to the final value reads as "3 de notite" while
+  // the count is still passing three.
+  const write = (shown) => {
+    node.textContent = shown.toLocaleString();
+    if (label && key) label.textContent = plural(key, shown);
+  };
+
   const still = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
   if (still || value < 20) {
-    node.textContent = value.toLocaleString();
+    write(value);
     return;
   }
   const duration = 900;
@@ -101,7 +109,7 @@ function countUp(node, value) {
     const t = Math.min(1, (now - start) / duration);
     // Ease out, so it arrives rather than stopping dead.
     const eased = 1 - Math.pow(1 - t, 3);
-    node.textContent = Math.round(value * eased).toLocaleString();
+    write(Math.round(value * eased));
     if (t < 1) requestAnimationFrame(step);
   };
   requestAnimationFrame(step);
@@ -188,16 +196,14 @@ async function renderLibrary() {
   stats.replaceChildren();
   for (const table of HEADLINE) {
     const n = stored.summary?.[table];
-    const label = plural(`fig.${table}`, n || 0);
     if (!n) continue;
     const box = document.createElement("div");
     box.className = "fig";
     const b = document.createElement("b");
     const caption = document.createElement("span");
-    caption.textContent = label;
     box.append(b, caption);
     stats.append(box);
-    countUp(b, n);
+    countUp(b, n, caption, `fig.${table}`);
   }
 
   const list = $("devices");
@@ -471,14 +477,10 @@ function rawReport(report, check) {
 }
 
 async function doMerge() {
-  const progress = $("progress");
-  const progressText = $("progressText");
   $("merge").disabled = true;
-  progress.hidden = false;
-  progress.removeAttribute("value");
-  progressText.hidden = false;
-  progressText.textContent = t("progress.reading");
   $("result").hidden = true;
+  startWorking();
+  await paint();
 
   try {
     const engine = await sqlEngine();
@@ -509,13 +511,11 @@ async function doMerge() {
 
     const report = await mergeInto(db, engine.Database, base, sources, mediaPlan, {
       inputFields: answerPolicy(),
-      onProgress: (message) => {
-        progressText.textContent = message;
-      },
+      onProgress: () => setStage("progress.merging"),
     });
 
-    progressText.textContent = t("progress.checking");
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    setStage("progress.checking");
+    await paint();
 
     const checkSources = [];
     for (const backup of ordered) {
@@ -527,7 +527,8 @@ async function doMerge() {
     const check = verify(db, checkSources, new Set(mediaPlan.keys()));
     for (const source of checkSources) source.db.close();
 
-    progressText.textContent = t("progress.writing");
+    setStage("progress.writing");
+    await paint();
     const manifest = JSON.parse(JSON.stringify(base.manifest));
     const stamp = new Date().toISOString().slice(0, 10);
     const name = `Combined library ${stamp}.jwlibrary`;
@@ -553,7 +554,7 @@ async function doMerge() {
     let remembered = false;
     let storeMessage = "";
     if (clean && !storeBroken && personId) {
-      progressText.textContent = t("progress.remembering");
+      setStage("progress.remembering");
       try {
         await rememberLibrary(personId, {
           blob: merged.blob,
@@ -600,8 +601,7 @@ async function doMerge() {
     $("reportRaw").textContent = "";
     say("err", t("result.errTitle"), error.message);
   } finally {
-    progress.hidden = true;
-    progressText.hidden = true;
+    stopWorking();
     updateMergeButton();
   }
 }
@@ -801,6 +801,51 @@ function watchSections() {
     { rootMargin: "0px 0px -12% 0px" }
   );
   targets.forEach((el) => seer.observe(el));
+}
+
+// ---- showing that work is happening -------------------------------------
+
+const STAGES = [
+  "progress.reading",
+  "progress.merging",
+  "progress.checking",
+  "progress.writing",
+  "progress.remembering",
+];
+
+/**
+ * Move the working panel to a stage.
+ *
+ * A 210 MB backup takes long enough that a still screen reads as a page that
+ * has stopped, so the panel names the step in hand, fills a bar behind every
+ * step already done, and creeps the current one forward.
+ */
+function setStage(key) {
+  const at = STAGES.indexOf(key);
+  $("progressText").textContent = t(key);
+  const bars = [...$("stageBars").children];
+  bars.forEach((bar, i) => {
+    bar.classList.toggle("done", i < at);
+    bar.classList.toggle("now", i === at);
+  });
+}
+
+function startWorking() {
+  const bars = $("stageBars");
+  bars.replaceChildren();
+  for (const _ of STAGES) bars.append(document.createElement("i"));
+  $("workingMark").replaceChildren($("markSource").content.cloneNode(true));
+  $("working").hidden = false;
+  setStage(STAGES[0]);
+}
+
+function stopWorking() {
+  $("working").hidden = true;
+}
+
+/** Give the browser a frame to paint before the thread goes busy again. */
+function paint() {
+  return new Promise((resolve) => requestAnimationFrame(() => resolve()));
 }
 
 // ---- the tutorial ---------------------------------------------------------
