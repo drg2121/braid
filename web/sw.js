@@ -3,14 +3,14 @@
 // Someone opening this from a home-screen icon with no signal should still be
 // able to combine their backups, so everything the page needs is cached.
 //
-// The page itself is fetched from the network first whenever there is one.
-// Serving a cached page first would mean everyone kept seeing yesterday's
-// version until their second visit -- including after a fix -- and the page is
-// a few kilobytes, so there is nothing to gain by holding it back. Everything
-// else is served from the cache and refreshed quietly afterwards, because the
-// SQLite engine is most of the weight and it changes about never.
+// The page and its own scripts are fetched from the network first, together.
+// Serving a cached script beside a fresh page is worse than being slow: the
+// two are one program, and an old app.js against a new index.html looks for
+// elements that no longer exist and dies before the page can start. Both are a
+// few kilobytes. Only the vendored SQLite engine is served from the cache
+// first, because it is most of the weight and changes about never.
 
-const CACHE = "braid-v3";
+const CACHE = "braid-v4";
 
 const ASSETS = [
   "./",
@@ -63,11 +63,19 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
   if (new URL(request.url).origin !== self.location.origin) return;
 
-  const wantsPage =
-    request.mode === "navigate" ||
-    (request.headers.get("accept") || "").includes("text/html");
+  // Everything this app is made of travels together; only the vendored engine
+  // is allowed to come from the cache ahead of the network.
+  const url = new URL(request.url);
+  const vendored = url.pathname.includes("/vendor/");
+  const together =
+    !vendored &&
+    (request.mode === "navigate" ||
+      (request.headers.get("accept") || "").includes("text/html") ||
+      url.pathname.endsWith(".js") ||
+      url.pathname.endsWith(".mjs") ||
+      url.pathname.endsWith(".webmanifest"));
 
-  if (wantsPage) {
+  if (together) {
     event.respondWith(
       fetch(request)
         .then((fresh) => {
