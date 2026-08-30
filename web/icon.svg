@@ -1,11 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img"
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img"
      aria-label="Braid">
-  <rect width="512" height="512" rx="112" fill="#5a2d8c"/>
-  <g fill="none" stroke="#ffffff" stroke-width="40" stroke-linecap="round">
-    <!-- Separate strands gathering into one. Kept to three strokes: anything
-         more turns to mush at the size a home-screen icon is actually seen. -->
-    <path d="M148 144 C148 244 256 232 256 302"/>
-    <path d="M364 144 C364 244 256 232 256 302"/>
-    <path d="M256 144 V386"/>
+  <!-- Two libraries overlapping, and what they share drawn solid: the union is
+       the whole point of the tool. Two shapes and one filled intersection are
+       all it is, which is why it still reads at eighteen pixels. -->
+  <defs>
+    <clipPath id="braid-overlap">
+      <rect x="18" y="18" width="46" height="46" rx="14"/>
+    </clipPath>
+  </defs>
+  <g fill="none" stroke="currentColor" stroke-width="9">
+    <rect x="18" y="18" width="46" height="46" rx="14"/>
+    <rect x="36" y="36" width="46" height="46" rx="14"/>
+  </g>
+  <g clip-path="url(#braid-overlap)">
+    <rect x="36" y="36" width="46" height="46" rx="14" fill="currentColor"/>
   </g>
 </svg>

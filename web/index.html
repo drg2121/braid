@@ -4,189 +4,452 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="theme-color" content="#5a2d8c">
+<meta name="theme-color" content="#f7f6f3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0b0b0d" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Braid">
+<meta name="description" content="Combine your JW Library backups from several devices into one. Runs entirely on your device; nothing is uploaded.">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icon.svg">
 <title>Braid</title>
 <style>
   :root {
-    --bg: #f4f4f7;
-    --panel: #ffffff;
-    --ink: #16161a;
-    --muted: #5d5e68;
-    --line: #e0e0e7;
-    --accent: #5a2d8c;
+    --paper:    #f7f6f3;
+    --surface:  #fffefc;
+    --ink:      #15141a;
+    --ink-2:    #57555f;
+    --ink-3:    #8b8993;
+    --rule:     #e5e2dc;
+    --rule-2:   #efece7;
+    --accent:   #5a3ec8;
     --accent-ink: #ffffff;
-    --ok-bg: #e7f5ec; --ok-ink: #14663a;
-    --warn-bg: #fdf1de; --warn-ink: #8a4f00;
-    --err-bg: #fdecea; --err-ink: #a4201a;
-    --radius: 14px;
+    --accent-wash: #efeafd;
+    --good:     #1c6b45;
+    --good-wash:#e6f2ec;
+    --warn:     #8a5310;
+    --warn-wash:#f7efe1;
+    --bad:      #a32a20;
+    --bad-wash: #f8eae8;
+
+    --step--1: 0.8125rem;
+    --step-0:  1rem;
+    --step-1:  1.0625rem;
+    --gap:     clamp(1.25rem, 5vw, 2rem);
+    --ease:    cubic-bezier(.22,.61,.36,1);
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #131317;
-      --panel: #1d1d23;
-      --ink: #ececf2;
-      --muted: #9fa0ac;
-      --line: #32323d;
-      --accent: #bb9ae0;
-      --accent-ink: #131317;
-      --ok-bg: #16301f; --ok-ink: #8fdcaf;
-      --warn-bg: #33260f; --warn-ink: #e6b16a;
-      --err-bg: #351d1b; --err-ink: #f3968e;
+      --paper:    #0b0b0d;
+      --surface:  #141419;
+      --ink:      #f3f2ef;
+      --ink-2:    #a5a3ae;
+      --ink-3:    #6f6d79;
+      --rule:     #24242c;
+      --rule-2:   #1b1b21;
+      --accent:   #a78bff;
+      --accent-ink: #131020;
+      --accent-wash: #1c1830;
+      --good:     #7fd7a6; --good-wash:#12271b;
+      --warn:     #e5ab5e; --warn-wash:#2a2010;
+      --bad:      #f2938a; --bad-wash: #2b1715;
     }
   }
-  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+
   body {
     margin: 0;
-    padding: 1.25rem 1rem calc(2rem + env(safe-area-inset-bottom));
-    background: var(--bg);
+    min-height: 100dvh;
+    background: var(--paper);
     color: var(--ink);
-    font: 17px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    -webkit-text-size-adjust: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text",
+                 "Segoe UI", Roboto, Inter, system-ui, sans-serif;
+    font-size: var(--step-0);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
   }
-  main { max-width: 42rem; margin: 0 auto; }
 
-  header { display: flex; align-items: center; gap: .7rem; margin-bottom: 1rem; }
-  header img { width: 40px; height: 40px; border-radius: 10px; }
-  h1 { font-size: 1.45rem; margin: 0; letter-spacing: -0.01em; }
-  header .who { margin-left: auto; }
+  /* A little tooth on the paper. Costs nothing and stops large flat areas
+     from looking like unpainted canvas. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    opacity: .5;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.045'/%3E%3C/svg%3E");
+  }
+  @media (prefers-color-scheme: dark) { body::before { opacity: .8; } }
 
-  section {
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    padding: 1.1rem;
-    margin-bottom: .9rem;
+  .wrap {
+    position: relative;
+    z-index: 1;
+    width: min(100% - 2.4rem, 46rem);
+    margin-inline: auto;
+    padding-block: clamp(1.4rem, 4vw, 2.6rem) calc(4rem + env(safe-area-inset-bottom));
   }
-  h2 {
-    font-size: .78rem; text-transform: uppercase; letter-spacing: .07em;
-    color: var(--muted); margin: 0 0 .8rem; font-weight: 700;
-    display: flex; justify-content: space-between; align-items: baseline; gap: .5rem;
-  }
-  h2 .side { text-transform: none; letter-spacing: 0; font-weight: 600; }
 
-  button {
-    font: inherit; font-weight: 600; border: 0; border-radius: 11px;
-    padding: .85rem 1.2rem; background: var(--accent); color: var(--accent-ink);
-    cursor: pointer; width: 100%; min-height: 48px;
+  /* ---- masthead ---- */
+
+  .masthead {
+    display: flex;
+    align-items: center;
+    gap: .7rem;
+    padding-bottom: 1.15rem;
+    border-bottom: 1px solid var(--rule);
   }
-  button.big { font-size: 1.08rem; padding: 1.05rem 1.2rem; min-height: 58px; }
-  button.secondary {
-    background: transparent; color: var(--accent); border: 1.5px solid var(--line);
+  .mark { width: 30px; height: 30px; color: var(--accent); flex: none; }
+  .mark svg { display: block; width: 100%; height: 100%; }
+  .wordmark {
+    margin: 0;
+    font-size: 1.28rem;
+    font-weight: 660;
+    letter-spacing: -.035em;
   }
-  button.quiet {
-    background: none; border: 0; color: var(--muted); font-weight: 600;
-    font-size: .88rem; padding: .4rem 0; min-height: 0; width: auto;
+  .masthead select { margin-left: auto; }
+
+  /* ---- hero ---- */
+
+  .hero { padding-block: clamp(2.2rem, 9vw, 3.6rem) clamp(1.8rem, 6vw, 2.6rem); }
+  .hero h2 {
+    margin: 0;
+    font-size: clamp(2.05rem, 8.4vw, 3.15rem);
+    line-height: 1.02;
+    letter-spacing: -.042em;
+    font-weight: 660;
+    text-wrap: balance;
   }
-  button:disabled { opacity: .45; cursor: default; }
-  button + button { margin-top: .6rem; }
-  .row { display: flex; gap: .6rem; }
-  .row > * { flex: 1; margin-top: 0 !important; }
+  .hero h2 em { font-style: normal; color: var(--accent); }
+  .hero p {
+    margin: 1.1rem 0 0;
+    max-width: 34ch;
+    color: var(--ink-2);
+    font-size: var(--step-1);
+  }
+  .seal {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    margin-top: 1.5rem;
+    padding: .42rem .8rem .42rem .6rem;
+    border: 1px solid var(--rule);
+    border-radius: 100px;
+    font-size: var(--step--1);
+    color: var(--ink-2);
+    background: var(--surface);
+  }
+  .seal::before {
+    content: "";
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--good);
+    box-shadow: 0 0 0 3px var(--good-wash);
+  }
+
+  /* ---- sections ---- */
+
+  section { padding-block: clamp(1.6rem, 5vw, 2.2rem); border-top: 1px solid var(--rule); }
+  section:first-of-type { border-top: 0; }
+
+  .label {
+    margin: 0 0 1.1rem;
+    font-size: .6875rem;
+    font-weight: 600;
+    letter-spacing: .155em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+  }
+  .label .side { letter-spacing: .02em; text-transform: none; font-weight: 500; }
+
+  /* ---- library figures ---- */
+
+  .figures {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(6.2rem, 1fr));
+    gap: .1rem 1.4rem;
+    margin-bottom: 1.6rem;
+  }
+  .figure { padding-block: .5rem; }
+  .figure b {
+    display: block;
+    font-size: clamp(1.75rem, 6.2vw, 2.3rem);
+    font-weight: 620;
+    letter-spacing: -.04em;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+  }
+  .figure span { color: var(--ink-3); font-size: var(--step--1); }
 
   ul { list-style: none; padding: 0; margin: 0; }
-  li.item {
-    display: flex; gap: .75rem; align-items: flex-start;
-    padding: .7rem 0; border-top: 1px solid var(--line);
+  li.row {
+    display: flex;
+    gap: 1rem;
+    align-items: baseline;
+    padding-block: .8rem;
+    border-top: 1px solid var(--rule-2);
   }
-  li.item:first-child { border-top: 0; padding-top: 0; }
-  .item .name { font-weight: 600; word-break: break-word; }
-  .item .meta { color: var(--muted); font-size: .86rem; margin-top: .15rem; }
-  .item .drop {
-    background: none; border: 0; color: var(--muted); font-size: 1.5rem;
-    line-height: 1; padding: 0 .3rem; width: auto; min-height: 0; cursor: pointer;
+  li.row:first-child { border-top: 0; }
+  .row .name { font-weight: 550; }
+  .row .meta { color: var(--ink-3); font-size: var(--step--1); margin-left: auto; text-align: right; }
+  .row .drop {
+    all: unset; cursor: pointer; color: var(--ink-3); font-size: 1.25rem;
+    line-height: 1; padding: 0 .2rem; margin-left: .4rem;
   }
-  .grow { flex: 1; min-width: 0; }
+  .row .drop:hover { color: var(--bad); }
+  .grow { min-width: 0; }
 
-  .stats { display: flex; flex-wrap: wrap; gap: .5rem; margin: .2rem 0 .9rem; }
-  .stat {
-    background: var(--bg); border: 1px solid var(--line); border-radius: 10px;
-    padding: .45rem .7rem; font-size: .85rem;
+  /* ---- controls ---- */
+
+  button {
+    font: inherit;
+    cursor: pointer;
+    border: 0;
+    border-radius: 13px;
+    width: 100%;
+    min-height: 52px;
+    padding: .9rem 1.3rem;
+    font-weight: 600;
+    letter-spacing: -.01em;
+    background: var(--accent);
+    color: var(--accent-ink);
+    transition: transform .16s var(--ease), opacity .16s var(--ease),
+                background-color .16s var(--ease);
   }
-  .stat b { display: block; font-size: 1.05rem; font-weight: 700; }
-
-  .empty { color: var(--muted); font-size: .93rem; margin: 0 0 .9rem; }
-
-  .banner { border-radius: 11px; padding: .85rem 1rem; font-size: .93rem; }
-  .banner + * { margin-top: .9rem; }
-  .banner.ok { background: var(--ok-bg); color: var(--ok-ink); }
-  .banner.warn { background: var(--warn-bg); color: var(--warn-ink); }
-  .banner.err { background: var(--err-bg); color: var(--err-ink); }
-  .banner strong { display: block; margin-bottom: .2rem; }
-  .privacy {
-    color: var(--muted); font-size: .87rem; text-align: center;
-    margin: 0 0 1rem;
+  button:hover { opacity: .92; }
+  button:active { transform: scale(.985); }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  button:disabled { opacity: .4; cursor: default; transform: none; }
+  button.lead { min-height: 58px; font-size: 1.06rem; }
+  button.ghost {
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--rule);
   }
+  button.ghost:hover { background: var(--surface); opacity: 1; }
+  button + button { margin-top: .55rem; }
+  .pair { display: flex; gap: .55rem; }
+  .pair > button { margin-top: 0; }
 
-  .field { margin-bottom: .9rem; }
-  label { display: block; font-weight: 600; font-size: .93rem; margin-bottom: .35rem; }
   select, input[type=text] {
-    font: inherit; width: 100%; padding: .7rem .8rem; border-radius: 11px;
-    border: 1.5px solid var(--line); background: var(--bg); color: var(--ink);
+    font: inherit;
+    width: 100%;
     min-height: 48px;
+    padding: .6rem .8rem;
+    border: 1px solid var(--rule);
+    border-radius: 11px;
+    background: var(--surface);
+    color: var(--ink);
+  }
+  .masthead select {
+    width: auto;
+    min-height: 36px;
+    padding: .2rem 1.6rem .2rem .6rem;
+    font-size: var(--step--1);
+    border-radius: 100px;
+  }
+  input[type=file] { display: none; }
+
+  .field { margin-bottom: 1rem; }
+  .field > label {
+    display: block;
+    font-size: var(--step--1);
+    font-weight: 600;
+    margin-bottom: .4rem;
   }
 
-  progress { width: 100%; height: 8px; margin-top: .8rem; }
+  /* ---- feedback ---- */
 
-  details { border-top: 1px solid var(--line); padding-top: .3rem; margin-top: .9rem; }
-  details:first-of-type { border-top: 0; }
-  summary {
-    cursor: pointer; font-weight: 600; font-size: .93rem; color: var(--accent);
-    padding: .55rem 0; list-style-position: outside;
+  progress {
+    width: 100%; height: 3px; margin-top: 1rem;
+    appearance: none; border: 0; background: var(--rule);
   }
+  progress::-webkit-progress-bar { background: var(--rule); }
+  progress::-webkit-progress-value { background: var(--accent); }
+
+  .note {
+    border-radius: 13px;
+    padding: 1rem 1.15rem;
+    margin-bottom: 1.1rem;
+    font-size: .95rem;
+    border: 1px solid transparent;
+    animation: rise .34s var(--ease) both;
+  }
+  .note strong { display: block; margin-bottom: .2rem; font-weight: 640; }
+  .note.ok   { background: var(--good-wash); color: var(--good); }
+  .note.warn { background: var(--warn-wash); color: var(--warn); }
+  .note.err  { background: var(--bad-wash);  color: var(--bad); }
+
+  @keyframes rise { from { opacity: 0; transform: translateY(6px); } }
+  #result:not([hidden]) { animation: rise .34s var(--ease) both; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+
+  /* ---- steps ---- */
+
+  ol.steps { counter-reset: s; list-style: none; padding: 0; margin: 0; }
+  ol.steps li {
+    counter-increment: s;
+    position: relative;
+    padding: 0 0 1.15rem 2.5rem;
+  }
+  ol.steps li:last-child { padding-bottom: 0; }
+  ol.steps li::before {
+    content: counter(s);
+    position: absolute;
+    left: 0;
+    top: -.05rem;
+    width: 1.65rem;
+    font-variant-numeric: tabular-nums;
+    font-weight: 620;
+    color: var(--accent);
+  }
+
+  .fine { color: var(--ink-3); font-size: var(--step--1); margin: 1.1rem 0 0; }
+  .fine strong { color: var(--ink-2); font-weight: 620; }
+  .fine:first-child { margin-top: 0; }
+
+  details { border-top: 1px solid var(--rule); margin-top: 1.4rem; }
+  details > summary {
+    cursor: pointer;
+    padding: .9rem 0;
+    font-size: var(--step--1);
+    font-weight: 600;
+    color: var(--ink-2);
+    list-style: none;
+  }
+  details > summary::-webkit-details-marker { display: none; }
+  details > summary::after { content: " +"; color: var(--ink-3); }
+  details[open] > summary::after { content: " –"; }
+  details > summary:hover { color: var(--ink); }
+
   pre {
-    background: var(--bg); border: 1px solid var(--line); border-radius: 10px;
-    padding: .8rem; overflow-x: auto; font-size: .8rem; margin: .5rem 0 0;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 11px;
+    padding: .9rem;
+    overflow-x: auto;
+    font-size: .78rem;
+    line-height: 1.5;
+    margin: 0 0 1rem;
     -webkit-overflow-scrolling: touch;
   }
-  ol.steps { padding-left: 1.3rem; margin: 0; }
-  ol.steps li { margin-bottom: .55rem; }
-  ol.steps li:last-child { margin-bottom: 0; }
-  code { background: var(--bg); border-radius: 5px; padding: .1rem .3rem; font-size: .87em; }
-  .hint { color: var(--muted); font-size: .87rem; margin: .6rem 0 0; }
-  .hint:first-child { margin-top: 0; }
-  input[type=file] { display: none; }
+  code {
+    background: var(--rule-2);
+    border-radius: 5px;
+    padding: .08rem .32rem;
+    font-size: .88em;
+  }
+
+  footer {
+    margin-top: 2.6rem;
+    padding-top: 1.2rem;
+    border-top: 1px solid var(--rule);
+    color: var(--ink-3);
+    font-size: var(--step--1);
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  footer a { color: inherit; text-underline-offset: 3px; }
+
+  /* ---- docked action ---- */
+
+  .dock {
+    position: fixed;
+    inset: auto 0 0 0;
+    z-index: 20;
+    padding: .7rem max(1.2rem, env(safe-area-inset-left))
+             calc(.7rem + env(safe-area-inset-bottom))
+             max(1.2rem, env(safe-area-inset-right));
+    background: color-mix(in srgb, var(--paper) 86%, transparent);
+    backdrop-filter: saturate(180%) blur(14px);
+    -webkit-backdrop-filter: saturate(180%) blur(14px);
+    border-top: 1px solid var(--rule);
+  }
+  @supports not (backdrop-filter: blur(1px)) { .dock { background: var(--paper); } }
+  .dock-inner { width: min(100%, 46rem); margin-inline: auto; display: flex; gap: .55rem; }
+  .dock button { margin-top: 0; white-space: nowrap; }
+  /* With a file to save, saving leads and choosing steps back -- and shrinks,
+     so the sentence that matters never breaks across two lines. */
+  #save:not([hidden]) { flex: 1 1 auto; }
+  #save:not([hidden]) ~ #choose {
+    flex: 0 1 auto;
+    width: auto;
+    padding-inline: 1.05rem;
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--rule);
+    font-size: var(--step--1);
+    font-weight: 550;
+  }
+  .wrap { padding-bottom: 8.5rem; }
+
+  /* ---- touch ---- */
+
+  @media (pointer: coarse) {
+    button { min-height: 54px; }
+    button.lead { min-height: 58px; }
+    .row .drop { padding: .5rem .7rem; margin: -.5rem -.4rem -.5rem 0; }
+    select, input[type=text] { min-height: 52px; }
+    /* 16px keeps iOS from zooming when a field takes focus. */
+    select, input[type=text] { font-size: 1rem; }
+    details > summary { padding-block: 1rem; }
+  }
+  @media (max-width: 26rem) {
+    :root { --step-0: 1.0625rem; --step-1: 1.09rem; }
+  }
+
   [hidden] { display: none !important; }
 </style>
 </head>
 <body>
-<main>
-  <header>
-    <img src="./icon.svg" alt="">
-    <h1>Braid</h1>
-    <select id="person" class="who" aria-label="Whose library" hidden></select>
-  </header>
+<div class="wrap">
 
-  <p class="privacy" id="privacy">Nothing is uploaded. Everything happens on this
-  device, and once opened this page works with no internet.</p>
+  <div class="masthead">
+    <span class="mark" id="mark" aria-hidden="true"></span>
+    <h1 class="wordmark">Braid</h1>
+    <select id="person" aria-label="Whose library" hidden></select>
+  </div>
+
+  <div class="hero">
+    <h2>Every device. <em>One library.</em></h2>
+    <p>Your notes, highlights, bookmarks and playlists, combined from every
+    device you study on — with nothing left behind.</p>
+    <span class="seal" id="privacy">Runs on this device. Nothing is uploaded.</span>
+  </div>
 
   <section id="libraryCard" hidden>
-    <h2>Your library <span class="side" id="libraryUpdated"></span></h2>
-    <div class="stats" id="librarySummary"></div>
-    <p class="hint" style="margin-top:0">From these devices:</p>
+    <p class="label">Your library <span class="side" id="libraryUpdated"></span></p>
+    <div class="figures" id="librarySummary"></div>
     <ul id="devices"></ul>
   </section>
 
   <section>
-    <h2>Add a backup</h2>
-    <p class="empty" id="empty">Choose the backup you made on a device. The first
-    time you need one from every device; after that, only the one you used.</p>
+    <p class="label">Add a backup</p>
+    <p class="fine" id="empty" style="margin-bottom:1.2rem">The first time, add one
+    from every device. After that, only the device you actually used.</p>
     <ul id="files"></ul>
     <input type="file" id="picker" multiple accept=".jwlibrary,.zip,application/zip">
-    <button class="big" id="choose">Choose a backup</button>
-    <button class="secondary" id="merge" hidden>Combine now</button>
+    <button class="ghost" id="merge" hidden>Combine now</button>
     <progress id="progress" hidden></progress>
-    <p class="hint" id="progressText" hidden></p>
+    <p class="fine" id="progressText" hidden></p>
   </section>
 
   <section id="result" hidden>
+    <p class="label">Result</p>
     <div id="resultBanner"></div>
-    <button class="big" id="save">Save the combined file</button>
-    <p class="hint">Save it to Files, then on each device open JW Library and go
-    to <strong>Personal Study ▸ ⤒ ▸ Restore Backup</strong> and pick it.</p>
+    <p class="fine" style="margin-top:0">Then on each device:
+    <strong>Personal Study ▸ ⤒ ▸ Restore Backup</strong>, and pick it.</p>
     <details>
       <summary>What changed</summary>
       <pre id="report"></pre>
@@ -194,23 +457,23 @@
   </section>
 
   <section>
-    <h2>How this works</h2>
+    <p class="label">How it works</p>
     <ol class="steps">
-      <li>On a device where you made notes: JW Library ▸
-      <strong>Personal Study</strong> ▸ the <strong>⤒</strong> icon ▸
-      <strong>Create Backup</strong>. Save it to Files.</li>
-      <li>Come back here and add it. Combining starts on its own.</li>
-      <li>Save the combined file, and restore it on each device.</li>
+      <li>On a device where you made notes, open JW Library and go to
+      <strong>Personal Study ▸ ⤒ ▸ Create Backup</strong>. Save it to Files.</li>
+      <li>Come back here and add it. Combining starts on its own, and checks
+      itself when it finishes.</li>
+      <li>Save the result, then restore it on every device.</li>
     </ol>
-    <p class="hint" id="installHint" hidden></p>
-    <p class="hint"><strong>Restoring replaces</strong> what is on that device.
+    <p class="fine" id="installHint" hidden></p>
+    <p class="fine"><strong>Restoring replaces</strong> what is on that device.
     That is the point — the combined file has everything — but it is why you
     restore the combined file and never one device's own backup. Keep your
     original backups until you have checked that everything is there.</p>
 
     <details>
       <summary>Settings</summary>
-      <div class="field" style="margin-top:.7rem">
+      <div class="field">
         <label for="inputFields">If a study answer differs between devices</label>
         <select id="inputFields">
           <option value="keep">Keep the most recent answer</option>
@@ -221,20 +484,54 @@
         <label for="personName">Whose library this is</label>
         <input type="text" id="personName" placeholder="Me">
       </div>
-      <div class="row">
-        <button class="secondary" id="addPerson">Add someone else</button>
-        <button class="secondary" id="removePerson">Remove this person</button>
+      <div class="pair">
+        <button class="ghost" id="addPerson">Add someone</button>
+        <button class="ghost" id="removePerson">Remove</button>
       </div>
-      <p class="hint">Each person keeps their own library and their own devices.
+      <p class="fine">Each person keeps their own library and their own devices.
       Useful on a shared tablet, or if you help someone else with theirs.</p>
-      <div class="row" style="margin-top:.9rem">
-        <button class="secondary" id="saveStored">Save the stored file</button>
-        <button class="secondary" id="forget">Forget this library</button>
+      <div class="pair" style="margin-top:1rem">
+        <button class="ghost" id="saveStored">Save stored file</button>
+        <button class="ghost" id="forget">Forget library</button>
       </div>
-      <p class="hint" id="storageNote"></p>
+      <p class="fine" id="storageNote"></p>
     </details>
   </section>
-</main>
+
+  <footer>
+    <span>Braid — open source, no account, no server.</span>
+    <a href="https://github.com/drg2121/braid">Source</a>
+  </footer>
+</div>
+
+<!-- The action that matters stays within reach of a thumb, whatever is on
+     screen. On a phone this is the difference between a page you scroll and a
+     tool you use. -->
+<div class="dock" id="dock">
+  <div class="dock-inner">
+    <button class="lead" id="save" hidden>Save the combined file</button>
+    <button class="lead" id="choose">Choose a backup</button>
+  </div>
+</div>
+
+<!-- The mark is inlined so it takes the accent colour in both themes. -->
+<template id="markSource">
+  <svg viewBox="0 0 100 100" role="img" aria-label="Braid">
+    <defs>
+      <clipPath id="braid-overlap">
+        <rect x="18" y="18" width="46" height="46" rx="14"/>
+      </clipPath>
+    </defs>
+    <g fill="none" stroke="currentColor" stroke-width="9">
+      <rect x="18" y="18" width="46" height="46" rx="14"/>
+      <rect x="36" y="36" width="46" height="46" rx="14"/>
+    </g>
+    <g clip-path="url(#braid-overlap)">
+      <rect x="36" y="36" width="46" height="46" rx="14" fill="currentColor"/>
+    </g>
+  </svg>
+</template>
+
 <!-- sql.js ships as a classic script that defines window.initSqlJs. -->
 <script src="./vendor/sql-wasm.js"></script>
 <script type="module" src="./app.js"></script>

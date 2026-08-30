@@ -73,17 +73,21 @@ function shortDate(iso) {
 function banner(target, kind, title, detail) {
   target.replaceChildren();
   const box = document.createElement("div");
-  box.className = `banner ${kind}`;
+  box.className = `note ${kind}`;
   const strong = document.createElement("strong");
   strong.textContent = title;
   box.append(strong, document.createTextNode(detail));
   target.append(box);
 }
 
-function say(kind, title, detail, { showSave = false } = {}) {
+function say(kind, title, detail, { showSave = false, reveal = false } = {}) {
   banner($("resultBanner"), kind, title, detail);
   $("save").hidden = !showSave;
   $("result").hidden = false;
+  // On a phone the result is usually below the fold by the time it appears.
+  if (reveal) {
+    $("result").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 }
 
 // -- people ----------------------------------------------------------------
@@ -150,10 +154,12 @@ async function renderLibrary() {
     const n = stored.summary?.[table];
     if (!n) continue;
     const box = document.createElement("div");
-    box.className = "stat";
+    box.className = "figure";
     const b = document.createElement("b");
     b.textContent = n.toLocaleString();
-    box.append(b, document.createTextNode(label));
+    const caption = document.createElement("span");
+    caption.textContent = label;
+    box.append(b, caption);
     stats.append(box);
   }
 
@@ -161,17 +167,14 @@ async function renderLibrary() {
   list.replaceChildren();
   for (const device of stored.devices || []) {
     const li = document.createElement("li");
-    li.className = "item";
-    const box = document.createElement("div");
-    box.className = "grow";
-    const name = document.createElement("div");
-    name.className = "name";
+    li.className = "row";
+    const name = document.createElement("span");
+    name.className = "name grow";
     name.textContent = device.name || "unnamed device";
-    const meta = document.createElement("div");
+    const meta = document.createElement("span");
     meta.className = "meta";
-    meta.textContent = `last backup ${shortDate(device.lastModified)}`;
-    box.append(name, meta);
-    li.append(box);
+    meta.textContent = shortDate(device.lastModified);
+    li.append(name, meta);
     list.append(li);
   }
 
@@ -182,9 +185,9 @@ async function renderLibrary() {
 function setPrivacyLine(worksOffline) {
   const offline =
     worksOffline || location.protocol === "file:" || window.BRAID_WASM_BASE64;
-  $("privacy").textContent =
-    "Nothing is uploaded. Everything happens on this device" +
-    (offline ? ", and this page works with no internet." : ".");
+  $("privacy").textContent = offline
+    ? "Runs on this device, with or without internet. Nothing is uploaded."
+    : "Runs on this device. Nothing is uploaded.";
 }
 
 async function showStorageNote() {
@@ -215,19 +218,15 @@ function renderFiles() {
 
   for (const [index, backup] of added.entries()) {
     const li = document.createElement("li");
-    li.className = "item";
+    li.className = "row";
 
-    const box = document.createElement("div");
-    box.className = "grow";
-    const name = document.createElement("div");
-    name.className = "name";
+    const name = document.createElement("span");
+    name.className = "name grow";
     name.textContent = backup.deviceName || backup.file.name;
-    const meta = document.createElement("div");
+    const meta = document.createElement("span");
     meta.className = "meta";
     meta.textContent =
-      `${backup.file.name} · backed up ${shortDate(backup.lastModified)}` +
-      ` · ${megabytes(backup.file.size)}`;
-    box.append(name, meta);
+      `${shortDate(backup.lastModified)} · ${megabytes(backup.file.size)}`;
 
     const drop = document.createElement("button");
     drop.className = "drop";
@@ -239,7 +238,7 @@ function renderFiles() {
       renderFiles();
     });
 
-    li.append(box, drop);
+    li.append(name, meta, drop);
     list.append(li);
   }
 
@@ -277,11 +276,16 @@ async function updateMergeButton() {
   // a way back in if that did not happen -- it stays hidden otherwise.
   $("merge").hidden = !enough;
 
-  $("choose").textContent = added.length
-    ? "Add another backup"
-    : stored
-      ? "Add the new backup"
-      : "Choose a backup";
+  // Beside a Save button there is no room for a sentence, so the label
+  // shortens rather than wrapping the primary action onto two lines.
+  const beside = !$("save").hidden;
+  $("choose").textContent = beside
+    ? "Add more"
+    : added.length
+      ? "Add another backup"
+      : stored
+        ? "Add the new backup"
+        : "Choose a backup";
 }
 
 async function addFiles(fileList) {
@@ -478,7 +482,7 @@ async function doMerge() {
           ` (${megabytes(merged.blob.size)}).` +
           (remembered ? " It is remembered, so next time add only what changed." : "") +
           storeMessage,
-        { showSave: true }
+        { showSave: true, reveal: true }
       );
     } else {
       const problems = report.integrityErrors.length + check.missing.length;
@@ -487,7 +491,7 @@ async function doMerge() {
         "Combined, but the check found problems.",
         `${problems} item(s) could not be confirmed, so this was not remembered.` +
           ` Open "What changed" below before you restore this anywhere.`,
-        { showSave: true }
+        { showSave: true, reveal: true }
       );
     }
 
@@ -648,7 +652,15 @@ async function registerWorker() {
   }
 }
 
+/** The mark is inlined rather than an <img> so currentColor reaches it. */
+function drawMark() {
+  const source = document.getElementById("markSource");
+  const target = $("mark");
+  if (source && target) target.append(source.content.cloneNode(true));
+}
+
 (async () => {
+  drawMark();
   await loadPeople();
   renderFiles();
   await renderLibrary();
