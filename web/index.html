@@ -133,7 +133,9 @@
   }
   .seal {
     display: inline-flex;
-    align-items: center;
+    /* The label wraps to two lines on a narrow phone, so the dot lines up with
+       the first line rather than floating between them. */
+    align-items: flex-start;
     gap: .5rem;
     margin-top: 1.5rem;
     padding: .42rem .8rem .42rem .6rem;
@@ -145,6 +147,8 @@
   }
   .seal::before {
     content: "";
+    flex: none;
+    margin-top: .52em;
     width: 6px; height: 6px; border-radius: 50%;
     background: var(--good);
     box-shadow: 0 0 0 3px var(--good-wash);
