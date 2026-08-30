@@ -330,7 +330,12 @@
   <section id="picked" class="watch" hidden>
     <p class="lbl" data-i18n="lbl.adding">Adding</p>
     <ul id="files"></ul>
-    <input type="file" id="picker" multiple accept=".jwlibrary,.zip,application/zip">
+    <!-- No accept filter. iOS resolves accept values to its own file types, and
+         .jwlibrary is not one it knows, so every backup came up greyed out and
+         unselectable in the Files picker -- which blocked the whole app on the
+         device it is mainly for. The file is checked properly once opened, and
+         anything that is not a library is refused with a sentence saying so. -->
+    <input type="file" id="picker" multiple>
     <button class="ghost" id="merge" hidden style="margin-top:1rem" data-i18n="btn.combineNow">Combine now</button>
     <progress id="progress" hidden></progress>
     <p class="fine" id="progressText" hidden></p>

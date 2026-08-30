@@ -78,7 +78,8 @@ const STRINGS = {
     "result.warnTitle": "Combinat, dar verificarea a găsit probleme.",
     "result.warnBody": "{n} element(e) nu au putut fi confirmate, deci nu s-a păstrat nimic. Deschide „Ce s-a schimbat” înainte să restaurezi.",
     "result.errTitle": "Nu a mers.",
-    "result.badFiles": "Unele fișiere nu au putut fi deschise.",
+    "result.badFiles": "Unele fișiere nu au putut fi folosite.",
+    "err.notBackup": "„{name}” nu este o copie de rezervă JW Library. Alege fișierul salvat din Personal Study ▸ ⤒.",
 
     "progress.reading": "Se citesc copiile…",
     "progress.merging": "Se combină {name}",
@@ -194,7 +195,8 @@ const STRINGS = {
     "result.warnTitle": "Combined, but the check found problems.",
     "result.warnBody": "{n} item(s) could not be confirmed, so nothing was remembered. Open “What changed” before you restore this anywhere.",
     "result.errTitle": "It did not work.",
-    "result.badFiles": "Some files could not be opened.",
+    "result.badFiles": "Some files could not be used.",
+    "err.notBackup": "\u201c{name}\u201d is not a JW Library backup. Choose the file you saved from Personal Study \u25b8 \u2913.",
 
     "progress.reading": "Reading your backups…",
     "progress.merging": "Merging {name}",

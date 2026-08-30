@@ -331,8 +331,10 @@ async function addFiles(fileList) {
     }
     try {
       added.push(await BackupFile.open(file));
-    } catch (error) {
-      problems.push(`${file.name}: ${error.message}`);
+    } catch {
+      // Any file at all can be picked now, so the message has to make sense to
+      // someone who chose the wrong one rather than quote the parser.
+      problems.push(t("err.notBackup", { name: file.name }));
     }
   }
   renderFiles();
