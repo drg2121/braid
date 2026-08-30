@@ -8,6 +8,7 @@
 // between zero and the total -- every one of those has to read correctly.
 
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
 const i18n = await import("./i18n.js");
@@ -135,6 +136,23 @@ describe("looking strings up", () => {
       en.add(inEn);
     }
     assert.ok(ro.size > 0 && en.size > 0);
+  });
+});
+
+describe("runtimes without a browser", () => {
+  it("does not assume navigator or document exist", () => {
+    // CI runs Node 20, where neither is a global. Reading them unguarded threw
+    // at import time and took every job down, so the guards are pinned here.
+    const source = readFileSync(new URL("./i18n.js", import.meta.url), "utf8");
+    const reads = source.match(/(?<!typeof )\bnavigator\./g) || [];
+    for (const use of reads) {
+      assert.ok(
+        /typeof navigator === "undefined"/.test(source),
+        `${use} is read without a guard`
+      );
+    }
+    assert.match(source, /typeof document !== "undefined"/);
+    assert.match(source, /typeof navigator === "undefined"/);
   });
 });
 

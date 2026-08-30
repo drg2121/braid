@@ -254,6 +254,10 @@ const STRINGS = {
  * outranks whatever the device says.
  */
 function preferredLang() {
+  // Guarded like the document access below: navigator is not a global in
+  // every runtime this module is loaded in -- Node gained it in 21, and the
+  // rules here are worth testing on older ones.
+  if (typeof navigator === "undefined") return "en";
   // Only the top preference counts. A phone set to English commonly lists
   // Romanian further down as a fallback, and treating that as a vote for
   // Romanian would hand an English speaker a Romanian page.
