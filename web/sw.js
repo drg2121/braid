@@ -1,10 +1,16 @@
 // Keeps the page working with no network.
 //
-// Someone opening this from a home screen icon in a hall with no signal should
-// still be able to combine their backups, so everything the page needs is
-// cached on first visit and served from there afterwards.
+// Someone opening this from a home-screen icon with no signal should still be
+// able to combine their backups, so everything the page needs is cached.
+//
+// The page itself is fetched from the network first whenever there is one.
+// Serving a cached page first would mean everyone kept seeing yesterday's
+// version until their second visit -- including after a fix -- and the page is
+// a few kilobytes, so there is nothing to gain by holding it back. Everything
+// else is served from the cache and refreshed quietly afterwards, because the
+// SQLite engine is most of the weight and it changes about never.
 
-const CACHE = "braid-v1";
+const CACHE = "braid-v2";
 
 const ASSETS = [
   "./",
@@ -45,29 +51,50 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+/** Put a copy in the cache, ignoring failures; storage may be full. */
+function remember(request, response) {
+  const copy = response.clone();
+  caches.open(CACHE).then((cache) => cache.put(request, copy)).catch(() => null);
+}
+
 self.addEventListener("fetch", (event) => {
   const request = event.request;
-  if (request.method !== "GET" || new URL(request.url).origin !== self.location.origin) {
+  if (request.method !== "GET") return;
+  if (new URL(request.url).origin !== self.location.origin) return;
+
+  const wantsPage =
+    request.mode === "navigate" ||
+    (request.headers.get("accept") || "").includes("text/html");
+
+  if (wantsPage) {
+    event.respondWith(
+      fetch(request)
+        .then((fresh) => {
+          if (fresh.ok) remember(request, fresh);
+          return fresh;
+        })
+        .catch(() =>
+          caches
+            .match(request)
+            .then((hit) => hit || caches.match("./index.html"))
+            .then((hit) => hit || Response.error())
+        )
+    );
     return;
   }
 
   event.respondWith(
     caches.match(request).then((hit) => {
       if (hit) {
-        // Refresh in the background so a later visit gets any update, without
-        // making this one wait for the network.
         fetch(request)
           .then((fresh) => {
-            if (fresh.ok) caches.open(CACHE).then((c) => c.put(request, fresh));
+            if (fresh.ok) remember(request, fresh);
           })
           .catch(() => null);
         return hit;
       }
       return fetch(request).then((fresh) => {
-        if (fresh.ok) {
-          const copy = fresh.clone();
-          caches.open(CACHE).then((c) => c.put(request, copy));
-        }
+        if (fresh.ok) remember(request, fresh);
         return fresh;
       });
     })
