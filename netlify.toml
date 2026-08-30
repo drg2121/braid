@@ -1,0 +1,37 @@
+# Netlify build for the browser app in web/.
+#
+# The site is entirely static and does its work in the visitor's browser, so
+# there is nothing server-side here: the build only produces the single-file
+# copy that can be sent to someone directly.
+
+[build]
+  publish = "web"
+  command = "python3 web/build.py --output web/braid.html"
+
+[build.environment]
+  PYTHON_VERSION = "3.11"
+
+# The page and its scripts are one program and must not be served from
+# different releases; the service worker already fetches them together, and
+# these headers keep an intermediary from undoing that.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "no-referrer"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+# The SQLite engine is the heavy part and changes about never.
+[[headers]]
+  for = "/vendor/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
