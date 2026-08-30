@@ -189,16 +189,19 @@ async function renderLibrary() {
 
   const list = $("devices");
   list.replaceChildren();
-  for (const device of stored.devices || []) {
+  for (const [index, device] of (stored.devices || []).entries()) {
     const li = document.createElement("li");
-    li.className = "row";
+    li.style.animationDelay = `${index * 0.05}s`;
+
     const name = document.createElement("span");
-    name.className = "name grow";
-    name.textContent = device.name || "unnamed device";
+    name.className = "name";
+    name.textContent = device.name || "—";
+
     const meta = document.createElement("span");
     meta.className = "meta";
     meta.textContent = shortDate(device.lastModified);
-    li.append(name, meta);
+
+    li.append(deviceGlyph(device.name), name, meta);
     list.append(li);
   }
 
@@ -670,6 +673,35 @@ function reveal(id, show) {
   if (show) requestAnimationFrame(() => el.classList.add("seen"));
 }
 
+/**
+ * A glyph for the kind of thing a device is.
+ *
+ * Guessed from the name JW Library reports, which is whatever the owner called
+ * the device. A wrong guess costs nothing -- it is decoration beside a label
+ * that already says which device it is.
+ */
+function deviceGlyph(name) {
+  const it = (name || "").toLowerCase();
+  const tablet = /pad|tab|slate/.test(it);
+  const phone = /phone|telefon|pixel|galaxy|moto|xiaomi|huawei/.test(it);
+
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("fill", "none");
+  svg.setAttribute("stroke", "currentColor");
+  svg.setAttribute("stroke-width", "1.8");
+  svg.setAttribute("stroke-linecap", "round");
+  svg.setAttribute("stroke-linejoin", "round");
+  svg.setAttribute("aria-hidden", "true");
+
+  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  if (phone) path.setAttribute("d", "M8 2.5h8a1.5 1.5 0 0 1 1.5 1.5v16a1.5 1.5 0 0 1-1.5 1.5H8A1.5 1.5 0 0 1 6.5 20V4A1.5 1.5 0 0 1 8 2.5ZM10.5 18.5h3");
+  else if (tablet) path.setAttribute("d", "M6 2.5h12A1.5 1.5 0 0 1 19.5 4v16a1.5 1.5 0 0 1-1.5 1.5H6A1.5 1.5 0 0 1 4.5 20V4A1.5 1.5 0 0 1 6 2.5ZM10.5 18.5h3");
+  else path.setAttribute("d", "M4 4.5h16a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1ZM2 19.5h20");
+  svg.append(path);
+  return svg;
+}
+
 /** Sections fade up as they come into view. */
 function watchSections() {
   const targets = document.querySelectorAll(".watch");
@@ -691,6 +723,87 @@ function watchSections() {
   targets.forEach((el) => seer.observe(el));
 }
 
+// ---- the tutorial ---------------------------------------------------------
+
+const TOUR_SEEN = "braid.tour";
+const TOUR_STEPS = 4;
+let tourAt = 0;
+
+/** Draw the current tutorial step, art and words together. */
+function paintTour() {
+  const art = $("tourArt").content.children[tourAt];
+  const stage = $("tourStage");
+  stage.replaceChildren(art.cloneNode(true));
+
+  $("tourTitle").textContent = t(`tour.${tourAt + 1}.h`);
+  $("tourText").textContent = t(`tour.${tourAt + 1}.p`);
+  $("tourNext").textContent =
+    tourAt === TOUR_STEPS - 1 ? t("tour.done") : t("tour.next");
+  $("tourBack").textContent = tourAt === 0 ? t("tour.skip") : t("tour.back");
+
+  const dots = [...$("tourDots").children];
+  dots.forEach((dot, i) => dot.classList.toggle("on", i === tourAt));
+}
+
+function openTour(at = 0) {
+  tourAt = at;
+  paintTour();
+  const dialog = $("tour");
+  if (typeof dialog.showModal === "function") dialog.showModal();
+  else dialog.setAttribute("open", "");
+}
+
+function closeTour() {
+  const dialog = $("tour");
+  if (typeof dialog.close === "function") dialog.close();
+  else dialog.removeAttribute("open");
+  try {
+    localStorage.setItem(TOUR_SEEN, "1");
+  } catch {
+    // Without storage it simply offers itself again next time.
+  }
+}
+
+function wireTour() {
+  $("tourOpen").addEventListener("click", () => openTour(0));
+  $("tourNext").addEventListener("click", () => {
+    if (tourAt === TOUR_STEPS - 1) closeTour();
+    else {
+      tourAt += 1;
+      paintTour();
+    }
+  });
+  $("tourBack").addEventListener("click", () => {
+    if (tourAt === 0) closeTour();
+    else {
+      tourAt -= 1;
+      paintTour();
+    }
+  });
+  // Tapping the backdrop is how a sheet is normally dismissed.
+  $("tour").addEventListener("click", (event) => {
+    if (event.target === $("tour")) closeTour();
+  });
+  $("tour").addEventListener("close", () => {
+    try {
+      localStorage.setItem(TOUR_SEEN, "1");
+    } catch {
+      // Nothing to remember it with; it will offer itself again.
+    }
+  });
+}
+
+/** Show it unprompted the first time, and never again unasked. */
+function offerTourOnce() {
+  let seen = "1";
+  try {
+    seen = localStorage.getItem(TOUR_SEEN);
+  } catch {
+    seen = "1"; // no storage: do not ambush someone on every visit
+  }
+  if (!seen) openTour(0);
+}
+
 /** Mark the chosen option in a segmented control. */
 function paintSegment(group, value, attr) {
   for (const button of group.querySelectorAll("button")) {
@@ -705,7 +818,9 @@ async function retranslate() {
   renderFiles();
   await renderLibrary();
   await showStorageNote();
+  setPrivacyLine(offlineReady);
   showInstallHint(offlineReady);
+  paintTour();
   paintSegment($("langSeg"), currentLang(), "lang");
   paintSegment($("themeSeg"), currentTheme(), "themeSet");
 }
@@ -746,6 +861,8 @@ function drawMark() {
   drawMark();
   watchSections();
   wireSettings();
+  wireTour();
+  paintTour();
   paintSegment($("langSeg"), currentLang(), "lang");
   paintSegment($("themeSeg"), currentTheme(), "themeSet");
 
@@ -757,4 +874,5 @@ function drawMark() {
   offlineReady = await registerWorker();
   setPrivacyLine(offlineReady);
   showInstallHint(offlineReady);
+  offerTourOnce();
 })();
