@@ -252,7 +252,24 @@
   summary::after{content:" +";color:var(--ink-3)}
   details[open] summary::after{content:" \2013"}
   pre{background:var(--surface);border:1px solid var(--rule);border-radius:12px;
-    padding:.85rem;overflow-x:auto;font-size:.76rem;line-height:1.5;margin:0 0 1rem}
+    padding:.85rem;overflow-x:auto;font-size:.72rem;line-height:1.5;margin:.4rem 0 1rem;
+    -webkit-overflow-scrolling:touch}
+  details.nested{border-top:0;margin-top:.2rem}
+  details.nested summary{font-size:.78rem;font-weight:550;color:var(--ink-3);
+    padding:.5rem 0}
+
+  /* what changed, in words rather than table names */
+  .digest{margin:.2rem 0 .6rem}
+  .digest h4{margin:1.1rem 0 .45rem;font-size:.92rem;font-weight:620;
+    letter-spacing:-.015em}
+  .digest h4:first-child{margin-top:.3rem}
+  .digest p{margin:0;color:var(--ink-2);font-size:.9rem;line-height:1.5}
+  .chips{display:flex;flex-wrap:wrap;gap:.4rem}
+  .chip{display:inline-flex;align-items:baseline;gap:.3rem;padding:.32rem .6rem;
+    border-radius:100px;background:var(--accent-soft);color:var(--accent);
+    font-size:.82rem;font-weight:600}
+  .chip span{font-weight:500;opacity:.85}
+  .digest .said{color:var(--ink-3);font-size:.86rem;line-height:1.5;margin:.2rem 0 0}
   .note-line{margin:1.7rem 0 0;padding:0 0 0 .9rem;
     border-left:2px solid var(--rule);color:var(--ink-3);
     font-size:.86rem;line-height:1.5}
@@ -303,7 +320,11 @@
     <p class="fine" style="margin-top:0" data-i18n="result.then"></p>
     <details>
       <summary data-i18n="result.whatChanged">What changed</summary>
-      <pre id="report"></pre>
+      <div id="report"></div>
+      <details class="nested">
+        <summary data-i18n="report.technical"></summary>
+        <pre id="reportRaw"></pre>
+      </details>
     </details>
   </section>
 

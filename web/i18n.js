@@ -24,6 +24,13 @@ const STRINGS = {
     "tour.3.p": "Salvează fișierul combinat, apoi pe fiecare dispozitiv alege să restaurezi copia de rezervă. Prima dată durează câteva minute.",
     "tour.4.h": "Data viitoare e mai scurt",
     "tour.4.p": "Biblioteca rămâne aici, deci aduci doar copia de pe dispozitivul pe care ai lucrat. Restul le știe deja.",
+    "fig.UserMark": ["subliniere", "sublinieri", "de sublinieri"],
+    "fig.Note": ["notiță", "notițe", "de notițe"],
+    "fig.Bookmark": ["marcaj", "marcaje", "de marcaje"],
+    "fig.Tag": ["etichetă", "etichete", "de etichete"],
+    "fig.PlaylistItem": ["element playlist", "elemente playlist", "de elemente playlist"],
+    "fig.InputField": ["răspuns de studiu", "răspunsuri de studiu", "de răspunsuri de studiu"],
+    "fig.IndependentMedia": ["fișier media", "fișiere media", "de fișiere media"],
     "hero.a": "Fiecare dispozitiv.",
     "hero.b": "O bibliotecă.",
     "pill.on": "Rămâne pe telefonul tău, cu sau fără internet",
@@ -70,11 +77,13 @@ const STRINGS = {
     "progress.writing": "Se scrie fișierul combinat…",
     "progress.remembering": "Se păstrează pentru data viitoare…",
 
-    "fig.UserMark": "sublinieri",
-    "fig.Note": "notițe",
-    "fig.Bookmark": "marcaje",
-    "fig.Tag": "etichete",
-    "fig.PlaylistItem": "elemente playlist",
+    "report.from": "De pe {name}",
+    "report.nothingNew": "Nimic nou — era deja tot aici.",
+    "report.checked": "Verificat",
+    "report.checkedBody": "Toate cele {n} {items} din copiile adăugate se regăsesc în fișierul combinat.",
+    "fig.item": ["element", "elemente", "de elemente"],
+    "report.worth": "De știut",
+    "report.technical": "Detalii tehnice",
 
     "warn.restore": "Restaurarea înlocuiește",
     "warn.restoreRest": " biblioteca de pe acel dispozitiv cu cea combinată. Păstrează copiile originale până verifici.",
@@ -124,6 +133,13 @@ const STRINGS = {
     "tour.3.p": "Save the combined file, then on each device choose to restore the backup. The first round takes a few minutes.",
     "tour.4.h": "Next time is shorter",
     "tour.4.p": "The library stays here, so you only bring the backup from the device you actually used. It already knows the rest.",
+    "fig.UserMark": ["highlight", "highlights"],
+    "fig.Note": ["note", "notes"],
+    "fig.Bookmark": ["bookmark", "bookmarks"],
+    "fig.Tag": ["tag", "tags"],
+    "fig.PlaylistItem": ["playlist item", "playlist items"],
+    "fig.InputField": ["study answer", "study answers"],
+    "fig.IndependentMedia": ["media file", "media files"],
     "hero.a": "Every device.",
     "hero.b": "One library.",
     "pill.on": "Stays on your phone, online or not",
@@ -170,11 +186,13 @@ const STRINGS = {
     "progress.writing": "Writing the combined file…",
     "progress.remembering": "Remembering it for next time…",
 
-    "fig.UserMark": "highlights",
-    "fig.Note": "notes",
-    "fig.Bookmark": "bookmarks",
-    "fig.Tag": "tags",
-    "fig.PlaylistItem": "playlist items",
+    "report.from": "From {name}",
+    "report.nothingNew": "Nothing new — it was all here already.",
+    "report.checked": "Checked",
+    "report.checkedBody": "All {n} {items} from the backups you added are in the combined file.",
+    "fig.item": ["item", "items"],
+    "report.worth": "Worth knowing",
+    "report.technical": "Technical detail",
 
     "warn.restore": "Restoring replaces",
     "warn.restoreRest": " that device's library with the combined one. Keep your originals until you have checked it.",
@@ -239,6 +257,27 @@ export function setLang(next) {
   lang = next;
   write(STORE_LANG, next);
   document.documentElement.lang = next;
+}
+
+/**
+ * The right noun for a count.
+ *
+ * Romanian takes three forms, and the third is the one everyone forgets: past
+ * nineteen the noun needs "de" in front of it, so 65 is "65 de sublinieri"
+ * rather than "65 sublinieri". English needs only singular and plural.
+ */
+export function plural(key, n) {
+  const table = STRINGS[lang] || STRINGS.ro;
+  const forms = table[key] || STRINGS.en[key];
+  if (!Array.isArray(forms)) return String(forms ?? key);
+  if (n === 1) return forms[0];
+  if (forms.length < 3) return forms[1];
+  // Zero takes the plain plural; otherwise it is the last two digits that
+  // decide, and only 1 through 19 escape the "de". So 100 needs it and 101
+  // does not.
+  const within = Math.abs(n) % 100;
+  const few = n === 0 || (within >= 1 && within <= 19);
+  return few ? forms[1] : forms[2];
 }
 
 /** Look up a string, filling {placeholders}. */

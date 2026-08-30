@@ -17,6 +17,7 @@ import {
 } from "./store.js";
 import {
   LANGS,
+  plural,
   THEMES,
   applyStatic,
   applyTheme,
@@ -33,6 +34,18 @@ const $ = (id) => document.getElementById(id);
 
 // Rows worth showing as a headline; the rest stay in the detailed report.
 const HEADLINE = ["UserMark", "Note", "Bookmark", "Tag", "PlaylistItem"];
+
+// What a person has a word for. Everything else the engine counts is plumbing
+// holding these together, and naming it by its table helps nobody.
+const NAMEABLE = [
+  "UserMark",
+  "Note",
+  "Bookmark",
+  "Tag",
+  "PlaylistItem",
+  "InputField",
+  "IndependentMedia",
+];
 
 let SQL = null;
 let people = [];
@@ -174,8 +187,8 @@ async function renderLibrary() {
   const stats = $("librarySummary");
   stats.replaceChildren();
   for (const table of HEADLINE) {
-    const label = t(`fig.${table}`);
     const n = stored.summary?.[table];
+    const label = plural(`fig.${table}`, n || 0);
     if (!n) continue;
     const box = document.createElement("div");
     box.className = "fig";
@@ -339,59 +352,121 @@ async function addFiles(fileList) {
 
 // -- the report ------------------------------------------------------------
 
-function reportText(report, check) {
-  const lines = [`Started from : ${report.base} (${report.baseDevice})`];
+/**
+ * Say what changed, in words.
+ *
+ * The engine counts every table it touches, join tables included. Printing
+ * that verbatim gives a wall of identifiers like
+ * PlaylistItemIndependentMediaMap, which tells a reader nothing and reads like
+ * a crash report. Only the things people have a name for appear here; the full
+ * tally stays underneath for the times a merge has actually gone wrong.
+ */
+function renderReport(report, check) {
+  const box = $("report");
+  box.replaceChildren();
+  const digest = document.createElement("div");
+  digest.className = "digest";
+
   for (const source of report.sources) {
-    lines.push("", `Added from   : ${source.name} (${source.device})`);
+    const heading = document.createElement("h4");
+    heading.textContent = t("report.from", { name: source.device || source.name });
+    digest.append(heading);
+
+    const chips = document.createElement("div");
+    chips.className = "chips";
+    for (const table of NAMEABLE) {
+      const n = (source.added[table] || 0) + (source.updated[table] || 0);
+      if (!n) continue;
+      const chip = document.createElement("span");
+      chip.className = "chip";
+      const count = document.createElement("b");
+      count.textContent = `+${n.toLocaleString()}`;
+      const label = document.createElement("span");
+      label.textContent = plural(`fig.${table}`, n);
+      chip.append(count, label);
+      chips.append(chip);
+    }
+
+    if (chips.childElementCount) {
+      digest.append(chips);
+    } else {
+      const nothing = document.createElement("p");
+      nothing.textContent = t("report.nothingNew");
+      digest.append(nothing);
+    }
+
+    for (const conflict of source.conflicts) {
+      const said = document.createElement("p");
+      said.className = "said";
+      said.textContent = `${conflict.detail} — ${conflict.resolution}`;
+      digest.append(said);
+    }
+  }
+
+  const checkedTotal = Object.values(check.checked).reduce((a, b) => a + b, 0);
+  const heading = document.createElement("h4");
+  heading.textContent = t("report.checked");
+  const body = document.createElement("p");
+  body.textContent = t("report.checkedBody", {
+    n: checkedTotal.toLocaleString(),
+    items: plural("fig.item", checkedTotal),
+  });
+  digest.append(heading, body);
+
+  for (const missing of check.missing.slice(0, 20)) {
+    const line = document.createElement("p");
+    line.className = "said";
+    line.textContent = `${missing.table}: ${missing.description}`;
+    digest.append(line);
+  }
+
+  box.append(digest);
+  $("reportRaw").textContent = rawReport(report, check);
+}
+
+/** The unabridged tally, for when something has gone wrong. */
+function rawReport(report, check) {
+  const lines = [`base: ${report.base} (${report.baseDevice})`];
+  for (const source of report.sources) {
+    lines.push("", `source: ${source.name} (${source.device})`);
     for (const [label, bucket] of [
-      ["new", source.added],
+      ["added", source.added],
       ["updated", source.updated],
-      ["already there", source.reused],
-      ["not added", source.skipped],
+      ["reused", source.reused],
+      ["skipped", source.skipped],
     ]) {
       const detail = Object.entries(bucket)
         .filter(([, n]) => n)
         .sort()
         .map(([table, n]) => `${table}=${n}`)
         .join("  ");
-      if (detail) lines.push(`  ${label.padEnd(14)}${detail}`);
+      if (detail) lines.push(`  ${label.padEnd(9)}${detail}`);
     }
-    lines.push(
-      `  media         added=${source.mediaAdded} already there=${source.mediaReused}`
-    );
-    for (const conflict of source.conflicts) {
-      lines.push(`  ! ${conflict.detail} -> ${conflict.resolution}`);
-    }
+    lines.push(`  media    added=${source.mediaAdded} reused=${source.mediaReused}`);
   }
 
-  lines.push("", "In the combined library");
+  lines.push("", "totals");
   for (const table of Object.keys(report.totalsAfter).sort()) {
     const before = report.totalsBefore[table] ?? 0;
     const after = report.totalsAfter[table];
     if (!after) continue;
     const gained = after - before;
     lines.push(
-      `  ${table.padEnd(34)}${String(after).padStart(7)}${gained ? `  (+${gained})` : ""}`
+      `  ${table.padEnd(32)}${String(after).padStart(6)}${gained ? ` (+${gained})` : ""}`
     );
   }
 
-  lines.push("", "Checked and found in the combined library");
+  lines.push("", "verified");
   for (const [table, n] of Object.entries(check.checked).sort()) {
-    lines.push(`  ${table.padEnd(34)}${String(n).padStart(7)}`);
+    lines.push(`  ${table.padEnd(32)}${String(n).padStart(6)}`);
   }
-  for (const missing of check.missing.slice(0, 40)) {
+  for (const missing of check.missing) {
     lines.push(`  MISSING ${missing.table}: ${missing.description}`);
   }
-  for (const file of check.mediaMissingFiles.slice(0, 20)) {
-    lines.push(`  MISSING FILE ${file}`);
-  }
-  for (const error of report.integrityErrors) {
-    lines.push(`  INTEGRITY ${error}`);
-  }
+  for (const file of check.mediaMissingFiles) lines.push(`  MISSING FILE ${file}`);
+  for (const error of report.integrityErrors) lines.push(`  INTEGRITY ${error}`);
   return lines.join("\n");
 }
-
-// -- the merge -------------------------------------------------------------
 
 async function doMerge() {
   const progress = $("progress");
@@ -469,7 +544,7 @@ async function doMerge() {
 
     merged = { blob: builder.finish("application/octet-stream"), name };
 
-    $("report").textContent = reportText(report, check);
+    renderReport(report, check);
     const clean = check.ok && !report.integrityErrors.length;
 
     // Only remember a result that checked out.
@@ -519,7 +594,8 @@ async function doMerge() {
     await showStorageNote();
   } catch (error) {
     merged = null;
-    $("report").textContent = "";
+    $("report").replaceChildren();
+    $("reportRaw").textContent = "";
     say("err", t("result.errTitle"), error.message);
   } finally {
     progress.hidden = true;
