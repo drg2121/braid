@@ -28,6 +28,12 @@ NODE = shutil.which("node")
 
 pytestmark = pytest.mark.skipif(NODE is None, reason="Node is not installed")
 
+# Each call pays for a fresh Node start and a WebAssembly compile before it
+# does any work. That is milliseconds on a developer's machine and minutes on a
+# starved shared runner, so the ceiling is set for the worst case rather than
+# the usual one -- a genuine hang still fails, just later.
+NODE_TIMEOUT = 900
+
 NEWER = "2026-08-01T00:00:00+0000"
 OLDER = "2026-01-01T00:00:00+0000"
 
@@ -103,13 +109,16 @@ def run_browser_engine(paths: list[Path], input_fields: str = "keep") -> dict:
             [NODE, str(runner), str(WEB), *[str(p) for p in paths]],
             capture_output=True,
             text=True,
-            timeout=300,
+            timeout=NODE_TIMEOUT,
             # Inherit the environment rather than replacing it: Node needs
             # several variables to start at all on Windows.
             env={**os.environ, "BRAID_INPUT_FIELDS": input_fields},
         )
     if result.returncode != 0:
-        pytest.fail(f"the browser engine failed:\n{result.stderr[-2000:]}")
+        pytest.fail(
+            f"the browser engine exited {result.returncode}\n"
+            f"stderr:\n{result.stderr[-2000:]}\nstdout:\n{result.stdout[-800:]}"
+        )
     line = [ln for ln in result.stdout.splitlines() if ln.startswith("{")]
     if not line:
         pytest.fail(f"no result from the browser engine:\n{result.stdout[-2000:]}")

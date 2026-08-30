@@ -31,6 +31,12 @@ NODE = shutil.which("node")
 
 pytestmark = pytest.mark.skipif(NODE is None, reason="Node is not installed")
 
+# Each call pays for a fresh Node start and a WebAssembly compile before it
+# does any work. That is milliseconds on a developer's machine and minutes on a
+# starved shared runner, so the ceiling is set for the worst case rather than
+# the usual one -- a genuine hang still fails, just later.
+NODE_TIMEOUT = 900
+
 RUNNER = r"""
 import { readFileSync, existsSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -89,7 +95,7 @@ def run_apply_wal(folder: Path) -> dict:
             [NODE, str(runner), str(WEB), str(folder)],
             capture_output=True,
             text=True,
-            timeout=120,
+            timeout=NODE_TIMEOUT,
             env=dict(os.environ),
         )
     if result.returncode != 0:
